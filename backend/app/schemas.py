@@ -18,6 +18,7 @@ class Health(BaseModel):
 class HourPoint(BaseModel):
     time: str  # "2026-02-10T13:00", местное время станции
     lead_day: Literal[1, 2]  # 1 — сутки D+1, 2 — сутки D+2 от момента прогноза
+    weather_run_days: Literal[1, 2, 3] | None = None  # из выпуска погоды за сколько суток до часа взяты значения
     p50: float  # прогноз мощности станции, 0–1
     p10: float
     p90: float
@@ -54,6 +55,18 @@ class ForecastAnalysis(BaseModel):
     update: dict[str, Any] | None = None  # детали пересчёта: прошлый выпуск, сутки, изменение энергии
 
 
+class Card(BaseModel):
+    """Карточка внимания диспетчера (passport.cards): пересмотр, широкий интервал, ненадёжный вход."""
+
+    kind: str  # revision | wide_interval | input
+    title: str
+    hours: list[str]  # [первый час, последний час]
+    value: float
+    text: str
+    rule: str
+    action: str
+
+
 class Forecast(BaseModel):
     issue_date: str
     issued_at: str
@@ -67,6 +80,85 @@ class Forecast(BaseModel):
     explanation: str
     mode: Literal["live", "demo"]  # live — решения принимала LLM; demo — детерминированный планировщик
     steps: list[AgentStep]
+    cards: list[Card] = []  # карточки внимания диспетчера
+    passport: dict[str, Any] | None = None  # паспорт выпуска: forecast_id, входы, версии модели и калибровки, хеши
+    fallback: bool | None = None  # LIVE, но цикл досчитал планировщик (фронт умеет вычислять сам по журналу)
+    computed_at: str | None = None  # когда выпуск создан (passport.created_at)
+
+
+class Station(BaseModel):
+    name: str
+    tz: str
+    utc_offset: str
+
+
+class Turbine(BaseModel):
+    id: str
+    lat: float
+    lon: float
+
+
+class DateRange(BaseModel):
+    first: str
+    last: str
+
+
+class Meta(BaseModel):
+    station: Station
+    turbines: list[Turbine]
+    issue_range: DateRange
+    history_range: DateRange
+    mode: Literal["live", "demo"]
+    llm_model: str | None  # None в DEMO
+    weather_sources: list[str]  # имена источников, как их называет агент (excluded_sources)
+    model_ready: bool  # False — первый прогноз ждёт обучения модели (~1 мин)
+    saved_forecasts: list[str]  # даты, для которых GET /api/forecast/{date} отдаст прогноз без пересчёта
+
+
+class BacktestDay(BaseModel):
+    issue_date: str
+    energy_d1: float
+    energy_d2: float
+    low_hours: int
+    flags: list[str]  # в CSV флаги не хранятся → []
+
+
+class FinalHour(BaseModel):
+    time: str
+    p50: float
+    p10: float
+    p90: float
+    issue_date: str
+
+
+class Backtest(BaseModel):
+    runs: int
+    file: str
+    final_file: str
+    generated_at: str
+    forecasts: list[BacktestDay]
+    final_hours: list[FinalHour]
+
+
+class HoldoutPoint(BaseModel):
+    time: str
+    lead_day: Literal[1, 2]
+    p50: float
+    p10: float  # интервал после конформной калибровки (как в прогнозе агента)
+    p90: float
+    curve: float
+    actual: float | None
+
+
+class HoldoutMae(BaseModel):
+    model: float | None
+    curve: float | None
+
+
+class Holdout(BaseModel):
+    issue_date: str
+    hours: list[HoldoutPoint]
+    mae: HoldoutMae
 
 
 class ForecastIn(BaseModel):
@@ -76,18 +168,6 @@ class ForecastIn(BaseModel):
 class BacktestIn(BaseModel):
     start: str = "2026-01-31"
     end: str = "2026-02-27"
-
-
-class BacktestItem(BaseModel):
-    issue_date: str
-    energy_d1: float
-    flags: list[str]
-
-
-class BacktestOut(BaseModel):
-    runs: int
-    file: str | None  # CSV пишется только при прогоне всего тестового периода, иначе None
-    forecasts: list[BacktestItem]
 
 
 class MetricRow(BaseModel):
