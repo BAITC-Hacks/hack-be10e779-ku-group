@@ -39,8 +39,8 @@ export function FebCalendar(props: { items: FebRun[]; year: number; month: numbe
           const warn = r.flags.length > 0
           const tip = [
             `Прогноз на ${ddmm(r.d1)} от ${ddmm(r.issue)} 23:59`,
-            `D+1: ${hoursFull(r.energyD1)} на номинале (${pct(share)} загрузки)`,
-            r.energyD2 != null ? `D+2 (${ddmm(r.d2)}): ${hoursFull(r.energyD2)}` : null,
+            `прогноз накануне: ${hoursFull(r.energyD1)} работы на полную (${pct(share)} от макс.)`,
+            r.energyD2 != null ? `прогноз на ${ddmm(r.d2)}, сделанный за 2 дня: ${hoursFull(r.energyD2)}` : null,
             r.lowHours != null ? `штиль: ${num(r.lowHours, 0)} ч из 48` : null,
             warn ? `предупреждения: ${r.flags.join('; ')}` : 'замечаний нет',
           ]
@@ -73,12 +73,12 @@ export function FebCalendar(props: { items: FebRun[]; year: number; month: numbe
           <span className="feb-legend-bar" aria-hidden>
             <span />
           </span>
-          доля суток на номинале (0–24 ч)
+          часов работы на полную мощность (0–24)
         </span>
         <span>
           <AlertTriangle size={12} className="feb-warn-ico" aria-hidden /> есть предупреждения анализа
         </span>
-        <span>ячейка — сутки прогноза, клик — открыть выпуск</span>
+        <span>клик по дню — открыть подробный прогноз</span>
       </div>
     </div>
   )

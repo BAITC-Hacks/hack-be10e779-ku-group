@@ -7,7 +7,7 @@ import { CalendarDays, Play, RefreshCw } from 'lucide-react'
 import type { FebruaryTabProps } from '../../app/shared'
 import { getBacktest, postBacktest } from '../../api/endpoints'
 import { Badge, Card, Empty, Notice, Skeleton, Spinner } from '../../components/ui'
-import { addDays, dateRu, dateTime, num, pct } from '../../lib/format'
+import { addDays, dateRu, dateShort, dateTime, num, pct } from '../../lib/format'
 import { daysBetween, ddmm, flagHead, int, mean, normalize, plural, type FebData } from './febData'
 import { FebCalendar } from './FebCalendar'
 import { FebBarsChart, FebFinalChart } from './FebChart'
@@ -178,13 +178,15 @@ export default function FebruaryTab({ meta, theme, onOpenDate }: FebruaryTabProp
       </button>
     ) : null
 
+  const ranked = [...items].sort((a, b) => b.energyD1 - a.energyD1)
+
   return (
     <div className="feb">
       <header className="feb-head">
         <div className="feb-head-text">
           <h1 className="feb-title">Ретроспективный прогон: февраль 2026</h1>
           <p className="feb-lead">
-            {runLabel}: каждый в конце дня D по архивному прогнозу погоды, доступному на тот момент → прогноз на сутки D+1 и D+2
+            {runLabel}: каждый делается вечером накануне по прогнозу погоды, известному на тот момент, — как будто будущее ещё неизвестно
           </p>
         </div>
         {headAction && <div className="feb-head-actions">{headAction}</div>}
@@ -250,21 +252,30 @@ export default function FebruaryTab({ meta, theme, onOpenDate }: FebruaryTabProp
 
       {data && items.length > 0 && (
         <div className="feb-stack">
+          <section className="card feb-verdict" aria-label="Главное за февраль">
+            <div className="eyebrow">Главное</div>
+            <p className="feb-verdict-text">
+              В феврале станция в среднем будет работать на <b className="mono">{pct(stats.avg != null ? stats.avg / 24 : null)}</b>{' '}
+              от максимальной мощности. Самые ветреные дни — <b>{ranked.slice(0, 3).map((r) => dateShort(r.d1)).join(', ')}</b>;
+              самые тихие — <b>{ranked.slice(-3).reverse().map((r) => dateShort(r.d1)).join(', ')}</b>.
+            </p>
+            <p className="small muted">Нажмите на день в календаре или столбец на графике — откроется подробный прогноз.</p>
+          </section>
           <div className="feb-kpis">
             <Kpi
-              label="Выпусков"
+              label="Прогнозов"
               value={int(data.runs)}
               sub={`${ddmm(items[0].issue)}–${dateRu(items[items.length - 1].issue)}, 23:59`}
             />
             <Kpi
-              label="Средняя выработка D+1"
+              label="В среднем за сутки"
               value={
                 <>
                   {num(stats.avg)}
                   <span className="feb-kpi-unit"> ч</span>
                 </>
               }
-              sub={`≈ ${pct(stats.avg != null ? stats.avg / 24 : null)} загрузки · ч на номинале в сутки`}
+              sub={`ч работы на полную мощность ≈ ${pct(stats.avg != null ? stats.avg / 24 : null)} от макс.`}
             />
             <Kpi
               label="Дней с предупреждениями"
@@ -303,32 +314,32 @@ export default function FebruaryTab({ meta, theme, onOpenDate }: FebruaryTabProp
             </Card>
             <Card
               eyebrow="Обзор месяца"
-              title="Выработка по суткам, ч на номинале"
+              title="Выработка по дням, ч работы на полную мощность"
               actions={<Badge tone="neutral">прогноз, не факт</Badge>}
               className="feb-card-chart"
             >
               <FebBarsChart items={items} theme={theme} onOpen={onOpenDate} />
               <div className="feb-legend small muted">
                 <span>
-                  <i className="feb-sw feb-sw--d1" /> D+1 — выпуск накануне
+                  <i className="feb-sw feb-sw--d1" /> прогноз, сделанный накануне
                 </span>
                 <span>
-                  <i className="feb-sw feb-sw--warn" /> D+1, есть предупреждения
+                  <i className="feb-sw feb-sw--warn" /> есть предупреждения агента
                 </span>
                 {items.some((r) => r.energyD2 != null) && (
                   <span>
-                    <i className="feb-sw feb-sw--d2" /> D+2 — те же сутки из выпуска на день раньше
+                    <i className="feb-sw feb-sw--d2" /> прогноз на тот же день, сделанный за 2 дня
                   </span>
                 )}
-                <span>клик по столбцу — открыть выпуск</span>
+                <span>клик по столбцу — открыть прогноз</span>
               </div>
               {data.finalHours.length > 0 && (
                 <div className="feb-final">
                   <div className="eyebrow">
-                    Итоговый ряд · {int(data.finalHours.length)} ч · p50 и интервал p10–p90, % номинала
+                    Весь февраль по часам · {int(data.finalHours.length)} ч · прогноз и вероятный диапазон, % от макс.
                   </div>
                   <FebFinalChart hours={data.finalHours} theme={theme} />
-                  <div className="small muted">Каждый час февраля — из самого свежего выпуска (горизонт D+1).</div>
+                  <div className="small muted">Каждый час — из самого свежего прогноза (сделанного накануне).</div>
                 </div>
               )}
             </Card>
@@ -338,7 +349,7 @@ export default function FebruaryTab({ meta, theme, onOpenDate }: FebruaryTabProp
             <FebDownloads runs={data.runs} />
           </Card>
 
-          <Card eyebrow="Выпуски" title={`Все выпуски · ${int(items.length)}`}>
+          <Card eyebrow="Прогнозы" title={`Все прогнозы · ${int(items.length)}`}>
             <FebTable items={items} onOpen={onOpenDate} />
           </Card>
         </div>

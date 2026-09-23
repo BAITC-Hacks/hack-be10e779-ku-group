@@ -126,3 +126,9 @@ button.feb-cell:hover { border-color: var(--border-strong); background: var(--pr
   .feb-cols > div { grid-template-columns: 80px minmax(0, 1fr); }
   .feb-flags-inner { max-width: 200px; }
 }
+
+/* главный вывод за февраль */
+.feb-verdict { border-color: var(--border-strong); }
+.feb-verdict-text { margin: 6px 0 4px; font-size: 18px; line-height: 1.4; font-weight: 500; }
+.feb-verdict-text .mono { color: var(--primary); }
+@media (max-width: 767px) { .feb-verdict-text { font-size: 16px; } }

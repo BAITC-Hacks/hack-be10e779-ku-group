@@ -5,7 +5,7 @@ import type { Theme } from '../../app/shared'
 import type { ChartOption } from '../../components/EChart'
 import { dateRu, dateTime, hourOf, num, pct } from '../../lib/format'
 import { cssVar } from '../../lib/theme'
-import { KIND_COLOR, KIND_LABEL, type LeadGroup, type MethodKind } from './model'
+import { KIND_COLOR, methodLabel, type LeadGroup, type MethodKind } from './model'
 
 type Colors = ReturnType<typeof readColors>
 
@@ -100,7 +100,7 @@ export function maeBarsOption(groups: LeadGroup[], theme: Theme): ChartOption {
   for (const g of groups)
     for (const r of g.rows) if (!methods.some((m) => m.name === r.name)) methods.push({ name: r.name, kind: r.kind })
   const colorOf = (k: MethodKind) => cssVar(KIND_COLOR[k])
-  const labelOf = (m: { name: string; kind: MethodKind }) => (m.kind === 'other' ? m.name : KIND_LABEL[m.kind])
+  const labelOf = (m: { name: string; kind: MethodKind }) => methodLabel(m.name, m.kind)
 
   return {
     grid: { left: 48, right: 12, top: 56, bottom: 28 },

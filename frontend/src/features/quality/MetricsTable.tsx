@@ -2,7 +2,7 @@
 
 import { CircleCheck } from 'lucide-react'
 import { pct } from '../../lib/format'
-import { intRu, KIND_COLOR, type LeadGroup } from './model'
+import { intRu, KIND_COLOR, type LeadGroup, methodLabel } from './model'
 
 export function MetricsTable(props: { groups: LeadGroup[]; holdout: string }) {
   return (
@@ -12,7 +12,7 @@ export function MetricsTable(props: { groups: LeadGroup[]; holdout: string }) {
           <caption className="q-sr-only">Ошибки прогноза по горизонтам и методам, период: {props.holdout}</caption>
           <thead>
             <tr>
-              <th scope="col">Горизонт</th>
+              <th scope="col">На когда</th>
               <th scope="col">Метод</th>
               <th scope="col" className="r">
                 Часов
@@ -35,14 +35,14 @@ export function MetricsTable(props: { groups: LeadGroup[]; holdout: string }) {
                 return (
                   <tr key={r.name} className={best ? 'q-best' : undefined}>
                     {i === 0 && (
-                      <th scope="rowgroup" rowSpan={g.rows.length} className="q-lead mono">
-                        {g.lead}
+                      <th scope="rowgroup" rowSpan={g.rows.length} className="q-lead">
+                        {g.lead === 'D+1' ? 'завтра' : g.lead === 'D+2' ? 'послезавтра' : g.lead}
                       </th>
                     )}
                     <td>
                       <span className="q-method">
                         <span className="q-swatch" style={{ background: `var(${KIND_COLOR[r.kind]})` }} aria-hidden />
-                        <span>{r.name}</span>
+                        <span title={r.name}>{methodLabel(r.name, r.kind)}</span>
                         {best && (
                           <span className="q-best-tag">
                             <CircleCheck size={14} aria-hidden /> лучший

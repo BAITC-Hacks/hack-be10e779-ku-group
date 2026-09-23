@@ -14,11 +14,11 @@ export function FebTable(props: { items: FebRun[]; onOpen: (issue: string) => vo
       <table className="data feb-table">
         <thead>
           <tr>
-            <th>Выпуск</th>
+            <th>Прогноз сделан</th>
             <th>Прогноз на</th>
-            <th className="r">Выработка D+1</th>
-            <th className="r">D+2</th>
-            <th className="r" title="Часов с мощностью ниже 5 % номинала из 48">
+            <th className="r">На след. день</th>
+            <th className="r" title="Прогноз на тот же день, сделанный за 2 дня">За 2 дня</th>
+            <th className="r" title="Часов с мощностью ниже 5 % от максимальной, из 48">
               Штиль, ч
             </th>
             <th>Предупреждения</th>

@@ -105,7 +105,7 @@ export function HoldoutCard(props: { theme: Theme }) {
       }
     >
       <p className="muted small q-holdout-sub">
-        Выпуск <b className="mono">{dateRu(date)} 23:59</b> → сутки D+1 <span className="mono">{dateRu(d1)}</span> и D+2{' '}
+        Прогноз сделан <b className="mono">{dateRu(date)} 23:59</b> на <span className="mono">{dateRu(d1)}</span> и{' '}
         <span className="mono">{dateRu(d2)}</span> · время станции UTC+5
       </p>
 
@@ -126,12 +126,12 @@ export function HoldoutCard(props: { theme: Theme }) {
 
       {view?.kind === 'holdout' && (
         <div className="q-holdout-mae" aria-live="polite">
-          <span className="eyebrow">MAE за эти 48 ч, % номинала</span>
+          <span className="eyebrow">Средняя ошибка за эти 48 ч, % от макс.</span>
           <span>
             модель <b className="mono">{pct(view.mae.model, 1)}</b>
           </span>
           <span className="muted">
-            кривая мощности <b className="mono">{pct(view.mae.curve, 1)}</b>
+            простой расчёт по ветру <b className="mono">{pct(view.mae.curve, 1)}</b>
           </span>
         </div>
       )}

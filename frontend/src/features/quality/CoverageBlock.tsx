@@ -53,7 +53,7 @@ export function CoverageBlock(props: {
   return (
     <div className="q-coverage">
       <p className="muted small q-lead-text">
-        Доля часов, когда фактическая выработка оказалась между p10 и p90. Цель — {pct(props.target)} часов.
+        Доля часов, когда настоящая выработка попала внутрь вероятного диапазона (p10–p90). Цель — {pct(props.target)} часов.
       </p>
 
       {props.coverage.length > 0 ? (

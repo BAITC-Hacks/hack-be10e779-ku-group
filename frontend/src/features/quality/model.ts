@@ -42,9 +42,9 @@ export type QualityData = {
 const ORDER: MethodKind[] = ['model', 'curve', 'persist', 'other']
 
 export const KIND_LABEL: Record<MethodKind, string> = {
-  model: 'Модель',
-  curve: 'Кривая мощности',
-  persist: 'Персистентность',
+  model: 'Наша модель',
+  curve: 'Простой расчёт по ветру',
+  persist: '«Завтра как сегодня»',
   other: 'Другой метод',
 }
 
@@ -54,6 +54,23 @@ export const KIND_COLOR: Record<MethodKind, string> = {
   curve: '--curve',
   persist: '--text-3',
   other: '--wind',
+}
+
+/** Подпись метода для людей. Вариант модели «Модель без gfs_ws100 (…)» → «Наша модель без GFS (ветер 100 м)». */
+export function methodLabel(name: string, kind: MethodKind): string {
+  if (kind === 'model' && /без/i.test(name)) {
+    const src = name.match(/без (\S+)/)?.[1] ?? ''
+    const [id, h] = src.split('_ws')
+    return `Наша модель без ${id.toUpperCase()}${h ? ` (ветер ${h} м)` : ''}`
+  }
+  return kind === 'other' ? name : KIND_LABEL[kind]
+}
+
+/** "D+1" → «Прогноз на завтра», "D+2" → «Прогноз на послезавтра». */
+export function leadHuman(lead: string): string {
+  if (lead === 'D+1') return 'Прогноз на завтра'
+  if (lead === 'D+2') return 'Прогноз на послезавтра'
+  return lead
 }
 
 export function kindOf(name: string): MethodKind {

@@ -53,12 +53,12 @@ export function FebBarsChart(props: { items: FebRun[]; theme: Theme; onOpen: (is
           if (!r) return ''
           const lines = [
             `<b>${esc(dateShort(r.d1))}, ${esc(weekday(r.d1))}</b>`,
-            `D+1 · выпуск ${esc(ddmm(r.issue))} 23:59: <b>${hoursFull(r.energyD1)}</b> (${pct(r.energyD1 / 24)})`,
+            `прогноз накануне (${esc(ddmm(r.issue))} 23:59): <b>${hoursFull(r.energyD1)}</b> (${pct(r.energyD1 / 24)} от макс.)`,
           ]
           const p = d2[i]
-          if (p?.energyD2 != null) lines.push(`D+2 · выпуск ${esc(ddmm(p.issue))} 23:59: ${hoursFull(p.energyD2)} (${pct(p.energyD2 / 24)})`)
+          if (p?.energyD2 != null) lines.push(`за 2 дня (${esc(ddmm(p.issue))} 23:59): ${hoursFull(p.energyD2)} (${pct(p.energyD2 / 24)} от макс.)`)
           lines.push(r.flags.length ? `Предупреждений: ${r.flags.length}` : 'Замечаний нет')
-          lines.push('<span style="opacity:.7">прогноз, не факт · клик — открыть выпуск</span>')
+          lines.push('<span style="opacity:.7">прогноз, не факт · клик — открыть подробно</span>')
           return lines.join('<br/>')
         },
       },
@@ -75,7 +75,7 @@ export function FebBarsChart(props: { items: FebRun[]; theme: Theme; onOpen: (is
         min: 0,
         max: 24,
         interval: 6,
-        name: 'ч на номинале',
+        name: 'ч на полной мощности',
         nameLocation: 'end',
         nameTextStyle: { color: c.text3, fontSize: 11, align: 'left' },
         axisLabel: { color: c.text3, fontFamily: c.mono, fontSize: 11 },
@@ -84,7 +84,7 @@ export function FebBarsChart(props: { items: FebRun[]; theme: Theme; onOpen: (is
       series: [
         {
           id: 'd1',
-          name: 'D+1 — выпуск накануне',
+          name: 'Прогноз накануне',
           type: 'bar',
           barMaxWidth: 16,
           barGap: '15%',
@@ -98,7 +98,7 @@ export function FebBarsChart(props: { items: FebRun[]; theme: Theme; onOpen: (is
           ? [
               {
                 id: 'd2',
-                name: 'D+2 — выпуск на сутки раньше',
+                name: 'Прогноз за 2 дня',
                 type: 'bar',
                 barMaxWidth: 16,
                 itemStyle: { color: c.primary, opacity: 0.35, borderRadius: [3, 3, 0, 0] },
@@ -158,9 +158,9 @@ export function FebFinalChart(props: { hours: FebData['finalHours']; theme: Them
           if (!h) return ''
           return [
             `<b>${esc(dateTime(h.time))}</b>`,
-            `p50: <b>${pct(h.p50)}</b>`,
-            `интервал p10–p90: ${pct(h.p10)} … ${pct(h.p90)}`,
-            `выпуск ${esc(ddmm(h.issue_date))} 23:59`,
+            `прогноз: <b>${pct(h.p50)}</b>`,
+            `вероятно от–до: ${pct(h.p10)} … ${pct(h.p90)}`,
+            `сделан ${esc(ddmm(h.issue_date))} 23:59`,
           ].join('<br/>')
         },
       },
@@ -183,7 +183,7 @@ export function FebFinalChart(props: { hours: FebData['finalHours']; theme: Them
         min: 0,
         max: 100,
         interval: 25,
-        name: '% номинала',
+        name: '% от макс.',
         nameTextStyle: { color: c.text3, fontSize: 11, align: 'left' },
         axisLabel: { color: c.text3, fontFamily: c.mono, fontSize: 11 },
         splitLine: { lineStyle: { color: c.border } },
@@ -200,7 +200,7 @@ export function FebFinalChart(props: { hours: FebData['finalHours']; theme: Them
         },
         {
           id: 'band',
-          name: 'Интервал p10–p90',
+          name: 'Вероятный диапазон',
           type: 'line',
           stack: 'band',
           symbol: 'none',
@@ -211,7 +211,7 @@ export function FebFinalChart(props: { hours: FebData['finalHours']; theme: Them
         },
         {
           id: 'p50',
-          name: 'p50',
+          name: 'Прогноз',
           type: 'line',
           symbol: 'none',
           lineStyle: { color: c.primary, width: 1.5 },
