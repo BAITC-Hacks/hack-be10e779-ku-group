@@ -6,6 +6,7 @@ import { EChart, type ChartOption } from '../../components/EChart'
 import type { Theme } from '../../app/shared'
 import { cssVar } from '../../lib/theme'
 import { addDays, dateShort, dateTime, esc, hoursFull, num, pct, weekday } from '../../lib/format'
+import { tr, useT } from '../../i18n'
 import { ddmm, type FebData, type FebRun } from './febData'
 
 function palette() {
@@ -26,6 +27,7 @@ type ClickParams = { componentType?: string; seriesId?: string; dataIndex?: numb
 /** Столбцы: выработка D+1 по 28 целевым суткам; D+2 — прогноз на те же сутки из выпуска на день раньше. */
 export function FebBarsChart(props: { items: FebRun[]; theme: Theme; onOpen: (issue: string) => void }) {
   const { items, theme, onOpen } = props
+  const { t, locale } = useT()
   const byIssue = useMemo(() => new Map(items.map((r) => [r.issue, r])), [items])
   // D+2 на сутки T — из выпуска T−2
   const d2 = useMemo(
@@ -36,6 +38,7 @@ export function FebBarsChart(props: { items: FebRun[]; theme: Theme; onOpen: (is
 
   const option = useMemo<ChartOption>(() => {
     void theme // цвета читаются из CSS-переменных текущей темы
+    void locale // подписи и тултипы — через tr() на текущем языке
     const c = palette()
     return {
       animationDuration: 300,
@@ -53,12 +56,13 @@ export function FebBarsChart(props: { items: FebRun[]; theme: Theme; onOpen: (is
           if (!r) return ''
           const lines = [
             `<b>${esc(dateShort(r.d1))}, ${esc(weekday(r.d1))}</b>`,
-            `прогноз накануне (${esc(ddmm(r.issue))} 23:59): <b>${hoursFull(r.energyD1)}</b> (${pct(r.energyD1 / 24)} от макс.)`,
+            tr('february.chart.tipD1', { issue: esc(ddmm(r.issue)), hours: `<b>${hoursFull(r.energyD1)}</b>`, share: pct(r.energyD1 / 24) }),
           ]
           const p = d2[i]
-          if (p?.energyD2 != null) lines.push(`за 2 дня (${esc(ddmm(p.issue))} 23:59): ${hoursFull(p.energyD2)} (${pct(p.energyD2 / 24)} от макс.)`)
-          lines.push(r.flags.length ? `Предупреждений: ${r.flags.length}` : 'Замечаний нет')
-          lines.push('<span style="opacity:.7">прогноз, не факт · клик — открыть подробно</span>')
+          if (p?.energyD2 != null)
+            lines.push(tr('february.chart.tipD2', { issue: esc(ddmm(p.issue)), hours: hoursFull(p.energyD2), share: pct(p.energyD2 / 24) }))
+          lines.push(r.flags.length ? tr('february.chart.tipWarns', { n: r.flags.length }) : tr('february.chart.tipNone'))
+          lines.push(`<span style="opacity:.7">${esc(tr('february.chart.tipFoot'))}</span>`)
           return lines.join('<br/>')
         },
       },
@@ -75,7 +79,7 @@ export function FebBarsChart(props: { items: FebRun[]; theme: Theme; onOpen: (is
         min: 0,
         max: 24,
         interval: 6,
-        name: 'ч на полной мощности',
+        name: tr('february.chart.yName'),
         nameLocation: 'end',
         nameTextStyle: { color: c.text3, fontSize: 11, align: 'left' },
         axisLabel: { color: c.text3, fontFamily: c.mono, fontSize: 11 },
@@ -84,7 +88,7 @@ export function FebBarsChart(props: { items: FebRun[]; theme: Theme; onOpen: (is
       series: [
         {
           id: 'd1',
-          name: 'Прогноз накануне',
+          name: tr('february.chart.seriesD1'),
           type: 'bar',
           barMaxWidth: 16,
           barGap: '15%',
@@ -98,7 +102,7 @@ export function FebBarsChart(props: { items: FebRun[]; theme: Theme; onOpen: (is
           ? [
               {
                 id: 'd2',
-                name: 'Прогноз за 2 дня',
+                name: tr('february.chart.seriesD2'),
                 type: 'bar',
                 barMaxWidth: 16,
                 itemStyle: { color: c.primary, opacity: 0.35, borderRadius: [3, 3, 0, 0] },
@@ -108,7 +112,7 @@ export function FebBarsChart(props: { items: FebRun[]; theme: Theme; onOpen: (is
           : []),
       ],
     }
-  }, [items, d2, hasD2, theme])
+  }, [items, d2, hasD2, theme, locale])
 
   const handleClick = (raw: unknown) => {
     const p = raw as ClickParams
@@ -133,7 +137,7 @@ export function FebBarsChart(props: { items: FebRun[]; theme: Theme; onOpen: (is
       height={300}
       theme={theme}
       onClick={handleClick}
-      ariaLabel="Столбчатая диаграмма: прогноз выработки на каждые сутки февраля, часы работы на номинале"
+      ariaLabel={t('february.chart.aria')}
     />
   )
 }
@@ -141,8 +145,10 @@ export function FebBarsChart(props: { items: FebRun[]; theme: Theme; onOpen: (is
 /** Итоговый ряд февраля (v2: final_hours) — каждый час из самого свежего выпуска, p50 и интервал p10–p90, % номинала. */
 export function FebFinalChart(props: { hours: FebData['finalHours']; theme: Theme }) {
   const { hours, theme } = props
+  const { t, locale } = useT()
   const option = useMemo<ChartOption>(() => {
     void theme
+    void locale
     const c = palette()
     const r1 = (v: number) => Math.round(v * 1000) / 10
     return {
@@ -158,9 +164,9 @@ export function FebFinalChart(props: { hours: FebData['finalHours']; theme: Them
           if (!h) return ''
           return [
             `<b>${esc(dateTime(h.time))}</b>`,
-            `прогноз: <b>${pct(h.p50)}</b>`,
-            `вероятно от–до: ${pct(h.p10)} … ${pct(h.p90)}`,
-            `сделан ${esc(ddmm(h.issue_date))} 23:59`,
+            tr('february.chart.final.tipP50', { value: `<b>${pct(h.p50)}</b>` }),
+            tr('february.chart.final.tipRange', { lo: pct(h.p10), hi: pct(h.p90) }),
+            tr('february.chart.final.tipIssued', { date: esc(ddmm(h.issue_date)) }),
           ].join('<br/>')
         },
       },
@@ -183,7 +189,7 @@ export function FebFinalChart(props: { hours: FebData['finalHours']; theme: Them
         min: 0,
         max: 100,
         interval: 25,
-        name: '% от макс.',
+        name: tr('february.chart.final.yName'),
         nameTextStyle: { color: c.text3, fontSize: 11, align: 'left' },
         axisLabel: { color: c.text3, fontFamily: c.mono, fontSize: 11 },
         splitLine: { lineStyle: { color: c.border } },
@@ -200,7 +206,7 @@ export function FebFinalChart(props: { hours: FebData['finalHours']; theme: Them
         },
         {
           id: 'band',
-          name: 'Вероятный диапазон',
+          name: tr('february.chart.final.band'),
           type: 'line',
           stack: 'band',
           symbol: 'none',
@@ -211,7 +217,7 @@ export function FebFinalChart(props: { hours: FebData['finalHours']; theme: Them
         },
         {
           id: 'p50',
-          name: 'Прогноз',
+          name: tr('february.chart.final.p50'),
           type: 'line',
           symbol: 'none',
           lineStyle: { color: c.primary, width: 1.5 },
@@ -219,14 +225,14 @@ export function FebFinalChart(props: { hours: FebData['finalHours']; theme: Them
         },
       ],
     }
-  }, [hours, theme])
+  }, [hours, theme, locale])
 
   return (
     <EChart
       option={option}
       height={220}
       theme={theme}
-      ariaLabel={`Почасовой итоговый прогноз февраля: ${num(hours.length, 0)} часов, медиана и интервал p10–p90`}
+      ariaLabel={t('february.chart.final.aria', { n: num(hours.length, 0) })}
     />
   )
 }

@@ -4,17 +4,20 @@
 import type { Forecast, HourPoint } from '../../api/types'
 import { LOW_POWER } from '../../lib/constants'
 import { addDays, dateRu, dateTime, weekday } from '../../lib/format'
+import { tr, type TKey } from '../../i18n'
 
 export type ObjectId = 'station' | 't1' | 't2'
 
-export const OBJECTS: { id: ObjectId; label: string }[] = [
-  { id: 'station', label: 'Станция' },
-  { id: 't1', label: 'Турбина 1' },
-  { id: 't2', label: 'Турбина 2' },
+// label — ключ словаря: подпись переводится при показе (t(o.label) / objectLabel)
+export const OBJECTS: { id: ObjectId; label: TKey }[] = [
+  { id: 'station', label: 'forecast.objects.station' },
+  { id: 't1', label: 'forecast.objects.t1' },
+  { id: 't2', label: 'forecast.objects.t2' },
 ]
 
 export function objectLabel(id: ObjectId): string {
-  return OBJECTS.find((o) => o.id === id)?.label ?? id
+  const o = OBJECTS.find((x) => x.id === id)
+  return o ? tr(o.label) : id
 }
 
 /** Значение прогноза для объекта: станция — p50, турбина — t1/t2 (может отсутствовать). */

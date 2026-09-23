@@ -3,19 +3,21 @@
 import { useMemo } from 'react'
 import { AlertTriangle } from 'lucide-react'
 import { hoursFull, num, pct } from '../../lib/format'
-import { ddmm, monthGrid, WEEK_RU, type FebRun } from './febData'
+import { useT } from '../../i18n'
+import { ddmm, monthGrid, WEEK_KEYS, type FebRun } from './febData'
 
 export function FebCalendar(props: { items: FebRun[]; year: number; month: number; onOpen: (issue: string) => void }) {
   const { items, year, month, onOpen } = props
+  const { t } = useT()
   const byTarget = useMemo(() => new Map(items.map((r) => [r.d1, r])), [items])
   const cells = useMemo(() => monthGrid(year, month), [year, month])
 
   return (
     <div className="feb-cal">
-      <div className="feb-cal-grid" role="group" aria-label="Прогноз выработки по дням месяца">
-        {WEEK_RU.map((w) => (
+      <div className="feb-cal-grid" role="group" aria-label={t('february.cal.aria')}>
+        {WEEK_KEYS.map((w) => (
           <div key={w} className="feb-cal-wd" aria-hidden>
-            {w}
+            {t(`february.cal.week.${w}`)}
           </div>
         ))}
         {cells.map((c) => {
@@ -29,7 +31,7 @@ export function FebCalendar(props: { items: FebRun[]; year: number; month: numbe
           }
           if (!r) {
             return (
-              <div key={c.date} className="feb-cell feb-cell--none" title={`${ddmm(c.date)}: выпуска с прогнозом на эти сутки нет`}>
+              <div key={c.date} className="feb-cell feb-cell--none" title={t('february.cal.none', { date: ddmm(c.date) })}>
                 <span className="feb-cell-day">{c.day}</span>
                 <span className="feb-cell-val muted">—</span>
               </div>
@@ -38,11 +40,11 @@ export function FebCalendar(props: { items: FebRun[]; year: number; month: numbe
           const share = Math.max(0, Math.min(1, r.energyD1 / 24))
           const warn = r.flags.length > 0
           const tip = [
-            `Прогноз на ${ddmm(r.d1)} от ${ddmm(r.issue)} 23:59`,
-            `прогноз накануне: ${hoursFull(r.energyD1)} работы на полную (${pct(share)} от макс.)`,
-            r.energyD2 != null ? `прогноз на ${ddmm(r.d2)}, сделанный за 2 дня: ${hoursFull(r.energyD2)}` : null,
-            r.lowHours != null ? `штиль: ${num(r.lowHours, 0)} ч из 48` : null,
-            warn ? `предупреждения: ${r.flags.join('; ')}` : 'замечаний нет',
+            t('february.cal.tipHead', { d1: ddmm(r.d1), issue: ddmm(r.issue) }),
+            t('february.cal.tipD1', { hours: hoursFull(r.energyD1), share: pct(share) }),
+            r.energyD2 != null ? t('february.cal.tipD2', { d2: ddmm(r.d2), hours: hoursFull(r.energyD2) }) : null,
+            r.lowHours != null ? t('february.cal.tipLow', { n: num(r.lowHours, 0) }) : null,
+            warn ? t('february.cal.tipWarn', { flags: r.flags.join('; ') }) : t('february.cal.tipNone'),
           ]
             .filter(Boolean)
             .join(' · ')
@@ -59,7 +61,7 @@ export function FebCalendar(props: { items: FebRun[]; year: number; month: numbe
               {warn && <AlertTriangle size={12} className="feb-cell-flag" aria-hidden />}
               <span className="feb-cell-val mono">
                 {num(r.energyD1)}
-                <span className="feb-unit"> ч</span>
+                <span className="feb-unit"> {t('february.unitH')}</span>
               </span>
               <span className="feb-cell-bar" aria-hidden>
                 <span style={{ width: `${share * 100}%` }} />
@@ -73,12 +75,12 @@ export function FebCalendar(props: { items: FebRun[]; year: number; month: numbe
           <span className="feb-legend-bar" aria-hidden>
             <span />
           </span>
-          часов работы на полную мощность (0–24)
+          {t('february.cal.legendBar')}
         </span>
         <span>
-          <AlertTriangle size={12} className="feb-warn-ico" aria-hidden /> есть предупреждения анализа
+          <AlertTriangle size={12} className="feb-warn-ico" aria-hidden /> {t('february.cal.legendWarn')}
         </span>
-        <span>клик по дню — открыть подробный прогноз</span>
+        <span>{t('february.cal.legendClick')}</span>
       </div>
     </div>
   )

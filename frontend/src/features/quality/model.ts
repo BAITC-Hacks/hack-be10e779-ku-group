@@ -3,7 +3,9 @@
 // v2 — покрытие в metrics.coverage, калибровка в metrics.calibration (docs/api-contract.md).
 // Все числа берутся из ответа, здесь только группировка и производные (отношения ошибок).
 
+import { createElement, Fragment, type ReactNode } from 'react'
 import type { MetricRow, Metrics } from '../../api/types'
+import { tr, type TKey } from '../../i18n'
 
 export type MethodKind = 'model' | 'curve' | 'persist' | 'other'
 
@@ -41,11 +43,9 @@ export type QualityData = {
 
 const ORDER: MethodKind[] = ['model', 'curve', 'persist', 'other']
 
-export const KIND_LABEL: Record<MethodKind, string> = {
-  model: 'Наша модель',
-  curve: 'Простой расчёт по ветру',
-  persist: '«Завтра как сегодня»',
-  other: 'Другой метод',
+/** Подпись распознанного метода на текущем языке. */
+export function kindLabel(kind: MethodKind): string {
+  return kind === 'other' ? tr('quality.kind.fallback') : tr(`quality.kind.${kind}`)
 }
 
 /** Цвет метода — CSS-переменная (одинаково в таблице, полосах и графике). */
@@ -61,15 +61,23 @@ export function methodLabel(name: string, kind: MethodKind): string {
   if (kind === 'model' && /без/i.test(name)) {
     const src = name.match(/без (\S+)/)?.[1] ?? ''
     const [id, h] = src.split('_ws')
-    return `Наша модель без ${id.toUpperCase()}${h ? ` (ветер ${h} м)` : ''}`
+    const source = id.toUpperCase()
+    return h ? tr('quality.variant.noSourceHeight', { source, height: h }) : tr('quality.variant.noSource', { source })
   }
-  return kind === 'other' ? name : KIND_LABEL[kind]
+  return kind === 'other' ? name : kindLabel(kind)
 }
 
 /** "D+1" → «Прогноз на завтра», "D+2" → «Прогноз на послезавтра». */
 export function leadHuman(lead: string): string {
-  if (lead === 'D+1') return 'Прогноз на завтра'
-  if (lead === 'D+2') return 'Прогноз на послезавтра'
+  if (lead === 'D+1') return tr('quality.lead.d1')
+  if (lead === 'D+2') return tr('quality.lead.d2')
+  return lead
+}
+
+/** "D+1" → «завтра», "D+2" → «послезавтра» (короткая подпись в таблице). */
+export function leadShort(lead: string): string {
+  if (lead === 'D+1') return tr('quality.leadShort.d1')
+  if (lead === 'D+2') return tr('quality.leadShort.d2')
   return lead
 }
 
@@ -162,19 +170,20 @@ export function meanAbsError(pairs: { pred: number | null | undefined; actual: n
   return n > 0 ? sum / n : null
 }
 
-/** «2026-01» → «январе 2026» (для подписи месяца проверки калибровки). */
-const MONTHS_PREP = ['январе', 'феврале', 'марте', 'апреле', 'мае', 'июне', 'июле', 'августе', 'сентябре', 'октябре', 'ноябре', 'декабре']
+/** «2026-01» → «январе 2026» / «2026 жылғы қаңтарда» / «January 2026» (подпись месяца проверки калибровки). */
 export function monthPrep(ym: string | undefined): string | null {
   const hit = ym ? /^(\d{4})-(\d{2})/.exec(ym) : null
   if (!hit) return null
   const m = Number(hit[2])
-  return m >= 1 && m <= 12 ? `${MONTHS_PREP[m - 1]} ${hit[1]}` : null
+  if (!(m >= 1 && m <= 12)) return null
+  const month = tr(`quality.months.m${hit[2]}` as TKey)
+  return tr('quality.months.template', { month, year: hit[1] })
 }
 
-/** 2885 → «2 885» (неразрывный пробел между разрядами). */
-export function intRu(v: number | null | undefined): string {
-  if (v == null || Number.isNaN(v)) return '—'
-  return Math.round(v)
-    .toString()
-    .replace(/\B(?=(\d{3})+(?!\d))/g, ' ')
+/** Шаблон перевода с плейсхолдерами → ReactNode: rich('на {num} точнее', { num: <b>12 %</b> }). Вёрстка остаётся в компоненте. */
+export function rich(s: string, nodes: Record<string, ReactNode>): ReactNode[] {
+  return s.split(/(\{\w+\})/).map((part, i) => {
+    const m = /^\{(\w+)\}$/.exec(part)
+    return createElement(Fragment, { key: i }, m && m[1] in nodes ? nodes[m[1]] : part)
+  })
 }

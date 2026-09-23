@@ -159,6 +159,7 @@ code, .mono { font-family: var(--mono); font-variant-numeric: tabular-nums; }
 }
 .segmented button + button { border-left: 1px solid var(--border); }
 .segmented button[aria-pressed='true'] { background: var(--primary-band); color: var(--primary); }
+.segmented-sm button { height: 30px; padding: 0 9px; font-size: 12px; display: inline-flex; align-items: center; }
 
 .notice {
   display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; border-radius: var(--radius-sm);

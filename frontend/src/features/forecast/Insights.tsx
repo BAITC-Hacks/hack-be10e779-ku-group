@@ -3,41 +3,46 @@
 import { MessageSquareText, ScanSearch } from 'lucide-react'
 import type { Forecast } from '../../api/types'
 import { Card, Notice } from '../../components/ui'
+import { useT } from '../../i18n'
 import { dateRu, num, pct } from '../../lib/format'
 import { dayLabel, prettyDates } from './model'
 import { plainFlag } from './plain'
+import { rich } from './rich'
 
 const SIGNIFICANT = 0.05 // как в контракте: mean_abs_change > 0.05 → «прогноз заметно изменился»
 
 export function Explanation(props: { f: Forecast; llmModel: string | null }) {
+  const { t, locale } = useT()
   const { f } = props
   const llm = f.mode === 'live' && !f.fallback
   const by = llm
-    ? `Сформулировано: LLM${props.llmModel ? ` (${props.llmModel})` : ''}`
+    ? t('forecast.explain.byLlm', { model: props.llmModel ? ` (${props.llmModel})` : '' })
     : f.mode === 'live'
-      ? 'LLM не завершила цикл, досчитал планировщик — текст мог быть сформирован по шаблону'
-      : 'Сформулировано по шаблону (DEMO, без LLM)'
+      ? t('forecast.explain.fallback')
+      : t('forecast.explain.template')
   return (
     <Card
       className="fc-explain"
-      eyebrow="Объяснение агента"
+      eyebrow={t('forecast.explain.eyebrow')}
       title={
         <span className="fc-title-icon">
-          <MessageSquareText size={16} aria-hidden /> Что ожидается
+          <MessageSquareText size={16} aria-hidden /> {t('forecast.explain.title')}
         </span>
       }
     >
       {f.explanation ? (
         <p className="fc-explain-text">{prettyDates(f.explanation)}</p>
       ) : (
-        <p className="muted">Объяснение не пришло в ответе.</p>
+        <p className="muted">{t('forecast.explain.missing')}</p>
       )}
+      {f.explanation && locale !== 'ru' && <div className="fc-explain-by muted">{t('forecast.explain.ruNote')}</div>}
       <div className="fc-explain-by">{by}</div>
     </Card>
   )
 }
 
 export function Analysis(props: { f: Forecast }) {
+  const { t } = useT()
   const { f } = props
   const flags = f.analysis?.flags ?? []
   const upd = f.analysis?.update
@@ -49,19 +54,26 @@ export function Analysis(props: { f: Forecast }) {
     const digits = num(upd.energy_old) === num(upd.energy_new) ? 2 : 1
     update = (
       <Notice tone={upd.significant ? 'warn' : 'info'}>
-        Вчерашний прогноз на {dayLabel(upd.day)} пересчитан по свежей погоде:{' '}
-        <span className="mono">{num(upd.energy_old, digits)}</span> → <span className="mono">{num(upd.energy_new, digits)}</span> ч
-        работы на полную мощность ({upd.energy_new >= upd.energy_old ? 'больше' : 'меньше'}), по часам в среднем на{' '}
-        <span className="mono">{pct(upd.mean_abs_change, 1)}</span>
+        {rich(
+          t('forecast.analysis.update', {
+            day: dayLabel(upd.day),
+            dir: upd.energy_new >= upd.energy_old ? t('forecast.analysis.more') : t('forecast.analysis.less'),
+          }),
+          {
+            old: <span className="mono">{num(upd.energy_old, digits)}</span>,
+            new: <span className="mono">{num(upd.energy_new, digits)}</span>,
+            mean: <span className="mono">{pct(upd.mean_abs_change, 1)}</span>,
+          },
+        )}
         <span className="fc-notice-sub">
-          Сравнение с прогнозом от {dateRu(upd.previous_issue)} · самое большое изменение за час — {pct(upd.max_abs_change, 1)}
+          {t('forecast.analysis.updateSub', { date: dateRu(upd.previous_issue), max: pct(upd.max_abs_change, 1) })}
         </span>
       </Notice>
     )
   } else if (changed != null) {
     update = (
       <Notice tone={changed > SIGNIFICANT ? 'warn' : 'info'}>
-        По сравнению со вчерашним прогнозом завтрашние часы изменились в среднем на <span className="mono">{pct(changed, 1)}</span>
+        {rich(t('forecast.analysis.changed'), { value: <span className="mono">{pct(changed, 1)}</span> })}
       </Notice>
     )
   }
@@ -69,16 +81,16 @@ export function Analysis(props: { f: Forecast }) {
   return (
     <Card
       className="fc-analysis"
-      eyebrow="Анализ результата"
+      eyebrow={t('forecast.analysis.eyebrow')}
       title={
         <span className="fc-title-icon">
-          <ScanSearch size={16} aria-hidden /> Проверки агента и пересчёт
+          <ScanSearch size={16} aria-hidden /> {t('forecast.analysis.title')}
         </span>
       }
     >
       <div className="fc-notices">
         {flags.length === 0 ? (
-          <Notice tone="ok">Замечаний нет</Notice>
+          <Notice tone="ok">{t('forecast.analysis.noFlags')}</Notice>
         ) : (
           flags.map((fl, i) => (
             <div key={i} title={fl}>
@@ -86,7 +98,7 @@ export function Analysis(props: { f: Forecast }) {
             </div>
           ))
         )}
-        {update && <div className="eyebrow fc-notices-sep">Пересчёт при свежей погоде</div>}
+        {update && <div className="eyebrow fc-notices-sep">{t('forecast.analysis.updateSep')}</div>}
         {update}
       </div>
     </Card>

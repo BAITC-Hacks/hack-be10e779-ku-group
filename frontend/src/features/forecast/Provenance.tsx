@@ -5,18 +5,20 @@
 import { CloudSun, Filter, Shield, ShieldAlert, ShieldCheck } from 'lucide-react'
 import type { Forecast } from '../../api/types'
 import { Badge } from '../../components/ui'
+import { rich } from './rich'
 import { dateTime } from '../../lib/format'
+import { tr, useT } from '../../i18n'
 
 /** "gfs_ws100" → «GFS (ветер 100 м)». */
 function prettySource(s: string): string {
   const [id, h] = s.split('_ws')
   const name = id === 'best_match' ? 'Open-Meteo' : id.toUpperCase()
-  return h ? `${name} (ветер ${h} м)` : name
+  return h ? `${name} (${tr('forecast.prov.wind', { h })})` : name
 }
 
-const BY_DEFINITION = 'по правилу архива Open-Meteo и задержке публикации'
-
 export function Provenance(props: { f: Forecast }) {
+  const { t } = useT()
+  const BY_DEFINITION = t('forecast.prov.byDefinition')
   const { f } = props
   const ti = f.time_integrity
   const excluded = f.excluded_sources ?? []
@@ -24,26 +26,20 @@ export function Provenance(props: { f: Forecast }) {
 
   const run = ti?.latest_weather_run ?? ti?.latest_weather_run_used
   const published = ti?.latest_run_published_by
-  const whenLabel = published ? `опубликован к ${dateTime(published)}` : run ? `выпуск ${dateTime(run)}` : ''
+  const whenLabel = published
+    ? t('forecast.prov.publishedBy', { time: dateTime(published) })
+    : run
+      ? t('forecast.prov.issue', { time: dateTime(run) })
+      : ''
 
   let integrity
   if (ti && ti.ok) {
     integrity = (
-      <Badge tone="ok" icon={<ShieldCheck size={14} />} title={`${runsHint}\nПроверка ${BY_DEFINITION}.`}>
+      <Badge tone="ok" icon={<ShieldCheck size={14} />} title={`${runsHint}\n${t('forecast.prov.checkTitle', { rule: BY_DEFINITION })}`}>
         <span className="fc-wrap">
-          Погода опубликована до момента прогноза ✓
-          {run && (
-            <>
-              {' · последний выпуск '}
-              <span className="mono">{dateTime(run)}</span>
-            </>
-          )}
-          {published && (
-            <>
-              {', опубликован к '}
-              <span className="mono">{dateTime(published)}</span>
-            </>
-          )}
+          {t('forecast.prov.okMain')}
+          {run && rich(t('forecast.prov.okLastRun'), { time: <span className="mono">{dateTime(run)}</span> })}
+          {published && rich(t('forecast.prov.okPublished'), { time: <span className="mono">{dateTime(published)}</span> })}
         </span>
       </Badge>
     )
@@ -51,7 +47,7 @@ export function Provenance(props: { f: Forecast }) {
     integrity = (
       <Badge tone="error" icon={<ShieldAlert size={14} />} title={runsHint}>
         <span className="fc-wrap">
-          Погода ({whenLabel || 'выпуск неизвестен'}) позже момента прогноза ({dateTime(ti.issued_at)}) — прогноз недействителен
+          {t('forecast.prov.bad', { when: whenLabel || t('forecast.prov.unknownRun'), issued: dateTime(ti.issued_at) })}
         </span>
       </Badge>
     )
@@ -59,25 +55,25 @@ export function Provenance(props: { f: Forecast }) {
     integrity = (
       <Badge tone="neutral" icon={<Shield size={14} />} title={f.weather_runs}>
         <span className="fc-wrap">
-          Архивный прогноз погоды · выпуски не позже <span className="mono">{dateTime(f.issued_at)}</span>
+          {rich(t('forecast.prov.neutral'), { time: <span className="mono">{dateTime(f.issued_at)}</span> })}
         </span>
       </Badge>
     )
   }
 
   return (
-    <div className="fc-prov" aria-label="Происхождение погоды">
+    <div className="fc-prov" aria-label={t('forecast.prov.aria')}>
       <div className="fc-prov-main">
         {integrity}
         <span className="fc-prov-note">{BY_DEFINITION}</span>
       </div>
       <Badge tone="neutral" icon={<CloudSun size={14} />} title={`${f.weather_source}\n${f.weather_runs}`}>
-        <span className="fc-wrap">Погода: архив Open-Meteo, 7 источников прогноза</span>
+        <span className="fc-wrap">{t('forecast.prov.source')}</span>
       </Badge>
       {excluded.length > 0 && (
-        <Badge tone="info" icon={<Filter size={14} />} title="Источники погоды, которые агент исключил: пропуски данных на часы прогноза (подробно — в шаге «Оценка источников погоды»)">
+        <Badge tone="info" icon={<Filter size={14} />} title={t('forecast.prov.excludedTitle')}>
           <span className="fc-wrap">
-            Агент отбросил неполные данные: {excluded.map(prettySource).join(', ')}
+            {t('forecast.prov.excluded', { list: excluded.map(prettySource).join(', ') })}
           </span>
         </Badge>
       )}

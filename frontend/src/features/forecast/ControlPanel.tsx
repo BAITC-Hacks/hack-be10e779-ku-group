@@ -2,8 +2,10 @@
 
 import { ChevronLeft, ChevronRight, Play, RefreshCw } from 'lucide-react'
 import { Spinner } from '../../components/ui'
+import { useT } from '../../i18n'
 import { addDays, dateRu } from '../../lib/format'
 import { ddmm, OBJECTS, targetDays, type ObjectId } from './model'
+import { rich } from './rich'
 
 export function ControlPanel(props: {
   issueDate: string
@@ -19,6 +21,7 @@ export function ControlPanel(props: {
   modelReady: boolean
   onRun: () => void
 }) {
+  const { t } = useT()
   const { issueDate, first, last, onDateChange } = props
   const [d1, d2] = targetDays(issueDate)
   const canPrev = issueDate > first
@@ -29,17 +32,17 @@ export function ControlPanel(props: {
   const disabled = props.running || props.busyOther != null
 
   const hint = props.busyOther
-    ? `Идёт прогноз на выпуск ${dateRu(props.busyOther)} — дождитесь окончания`
+    ? t('forecast.controls.busyOther', { date: dateRu(props.busyOther) })
     : !props.running && !props.modelReady
-      ? 'Первый прогноз займёт около минуты: модель обучается'
+      ? t('forecast.controls.firstRun')
       : null
 
   return (
-    <section className="card fc-ctrl" aria-label="Панель управления прогнозом">
+    <section className="card fc-ctrl" aria-label={t('forecast.controls.aria')}>
       <div className="fc-ctrl-row">
         <div className="fc-ctrl-group">
           <label className="eyebrow" htmlFor="fc-issue-date">
-            Дата прогноза
+            {t('forecast.controls.date')}
           </label>
           <div className="fc-date">
             <button
@@ -47,8 +50,8 @@ export function ControlPanel(props: {
               className="btn fc-iconbtn"
               onClick={() => go(addDays(issueDate, -1))}
               disabled={!canPrev}
-              aria-label="Предыдущий день"
-              title="Предыдущий день"
+              aria-label={t('forecast.controls.prevDay')}
+              title={t('forecast.controls.prevDay')}
             >
               <ChevronLeft size={16} />
             </button>
@@ -68,8 +71,8 @@ export function ControlPanel(props: {
               className="btn fc-iconbtn"
               onClick={() => go(addDays(issueDate, 1))}
               disabled={!canNext}
-              aria-label="Следующий день"
-              title="Следующий день"
+              aria-label={t('forecast.controls.nextDay')}
+              title={t('forecast.controls.nextDay')}
             >
               <ChevronRight size={16} />
             </button>
@@ -78,13 +81,13 @@ export function ControlPanel(props: {
 
         <div className="fc-ctrl-group">
           <span className="eyebrow" id="fc-object-label">
-            Объект
+            {t('forecast.controls.object')}
           </span>
           <div
             className="segmented"
             role="group"
             aria-labelledby="fc-object-label"
-            title="Станция = среднее двух турбин, в % от максимальной мощности"
+            title={t('forecast.controls.objectTitle')}
           >
             {OBJECTS.map((o) => (
               <button
@@ -93,7 +96,7 @@ export function ControlPanel(props: {
                 aria-pressed={props.object === o.id}
                 onClick={() => props.onObjectChange(o.id)}
               >
-                {o.label}
+                {t(o.label)}
               </button>
             ))}
           </div>
@@ -102,14 +105,14 @@ export function ControlPanel(props: {
         <div className="fc-ctrl-action">
           <button type="button" className="btn btn-primary fc-run" onClick={props.onRun} disabled={disabled}>
             {props.running ? (
-              <Spinner label={`Идёт прогноз… ${props.elapsed} с`} />
+              <Spinner label={t('forecast.controls.running', { sec: props.elapsed })} />
             ) : props.hasForecast ? (
               <>
-                <RefreshCw size={16} /> Пересчитать
+                <RefreshCw size={16} /> {t('forecast.controls.recalc')}
               </>
             ) : (
               <>
-                <Play size={16} /> Сделать прогноз
+                <Play size={16} /> {t('forecast.controls.run')}
               </>
             )}
           </button>
@@ -118,9 +121,12 @@ export function ControlPanel(props: {
 
       <div className="fc-ctrl-foot">
         <div className="fc-ctrl-caption">
-          Прогноз делается вечером <span className="mono">{dateRu(issueDate)}, 23:59</span> на{' '}
-          <span className="mono">{ddmm(d1)}</span> и <span className="mono">{ddmm(d2)}</span>
-          <span className="muted"> — как будто будущее ещё неизвестно: берётся только погода, опубликованная до этого момента</span>
+          {rich(t('forecast.controls.caption'), {
+            issue: <span className="mono">{dateRu(issueDate)}, 23:59</span>,
+            d1: <span className="mono">{ddmm(d1)}</span>,
+            d2: <span className="mono">{ddmm(d2)}</span>,
+          })}
+          <span className="muted">{t('forecast.controls.captionNote')}</span>
         </div>
         {hint && <div className="fc-ctrl-hint">{hint}</div>}
       </div>

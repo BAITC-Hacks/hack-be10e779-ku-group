@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { Info, Moon, Sun } from 'lucide-react'
+import { Info } from 'lucide-react'
 import { getHealth, getMeta, getMetrics } from './api/endpoints'
 import type { Health, Meta, Metrics } from './api/types'
 import type { TabId, Theme } from './app/shared'
@@ -7,6 +7,10 @@ import { Badge, Notice, Spinner } from './components/ui'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import { SiteFooter } from './components/SiteFooter'
 import { BrandMark } from './components/BrandMark'
+import { LanguageSelector } from './components/LanguageSelector'
+import { ThemeToggle } from './components/ThemeToggle'
+import { useT, type TKey } from './i18n'
+import * as themes from './lib/themeManager'
 import { DEFAULT_ISSUE_DATE, DEFAULT_META } from './lib/constants'
 import { num } from './lib/format'
 import ForecastTab from './features/forecast/ForecastTab'
@@ -17,28 +21,22 @@ import ProjectTab from './features/project/ProjectTab'
 import './App.css'
 
 type Tab = TabId
-const TABS: { id: Tab; label: string }[] = [
-  { id: 'forecast', label: 'Прогноз' },
-  { id: 'february', label: 'Февраль 2026' },
-  { id: 'quality', label: 'Качество модели' },
-  { id: 'project', label: 'О проекте' },
+const TABS: { id: Tab; label: TKey }[] = [
+  { id: 'forecast', label: 'app.tabs.forecast' },
+  { id: 'february', label: 'app.tabs.february' },
+  { id: 'quality', label: 'app.tabs.quality' },
+  { id: 'project', label: 'app.tabs.project' },
 ]
 
-function initialTheme(): Theme {
-  let t: Theme = 'dark'
-  try {
-    const saved = localStorage.getItem('theme')
-    if (saved === 'light' || saved === 'dark') t = saved
-  } catch {
-    /* хранилище недоступно — тема по умолчанию */
-  }
-  // атрибут ставим сразу, до рендера вкладок: графики читают цвета из CSS-переменных во время рендера
-  document.documentElement.dataset.theme = t
-  return t
-}
-
 export default function App() {
-  const [theme, setTheme] = useState<Theme>(initialTheme)
+  const { t, locale } = useT()
+  const [themeMode, setThemeMode] = useState<themes.ThemeMode>(themes.readMode)
+  // тема применяется синхронно (до рендера вкладок): графики читают цвета из CSS-переменных во время рендера
+  const [theme, setTheme] = useState<Theme>(() => {
+    const r = themes.resolve(themes.readMode())
+    themes.apply(r)
+    return r
+  })
   const [tab, setTab] = useState<Tab>('forecast')
   const [health, setHealth] = useState<Health | null>(null)
   const [serverError, setServerError] = useState<string | null>(null)
@@ -49,16 +47,27 @@ export default function App() {
   const [metricsError, setMetricsError] = useState<string | null>(null)
   const [aboutOpen, setAboutOpen] = useState(false)
 
-  const toggleTheme = () => {
-    const next: Theme = theme === 'dark' ? 'light' : 'dark'
-    document.documentElement.dataset.theme = next // до setState — см. initialTheme
-    setTheme(next)
-    try {
-      localStorage.setItem('theme', next)
-    } catch {
-      /* не критично */
-    }
+  const changeThemeMode = (m: themes.ThemeMode) => {
+    const r = themes.resolve(m)
+    themes.apply(r) // до setState — см. выше
+    themes.saveMode(m)
+    setThemeMode(m)
+    setTheme(r)
   }
+
+  // заголовок вкладки браузера — на языке интерфейса
+  useEffect(() => {
+    document.title = t('app.brand.title')
+  }, [t])
+
+  // режим «как в системе»: следим за сменой темы ОС
+  useEffect(() => {
+    if (themeMode !== 'system') return
+    return themes.onSystemChange((r) => {
+      themes.apply(r)
+      setTheme(r)
+    })
+  }, [themeMode])
 
   const connect = useCallback(() => {
     setServerError(null)
@@ -110,27 +119,32 @@ export default function App() {
             <BrandMark size={26} />
           </span>
           <div>
-            <div className="brand-name">Анемо</div>
+            <div className="brand-name">{t('app.brand.name')}</div>
             <div className="brand-sub">
-              {meta.station.name} · время станции UTC+5
+              {locale === 'ru' ? meta.station.name : t('app.brand.station')} · {t('app.brand.tagline')}
             </div>
           </div>
         </div>
 
-        <nav className="tabs" aria-label="Разделы">
-          {TABS.map((t) => (
-            <button key={t.id} className="tab" aria-current={tab === t.id ? 'page' : undefined} onClick={() => setTab(t.id)}>
-              {t.label}
+        <nav className="tabs" aria-label={t('app.tabs.aria')}>
+          {TABS.map((tb) => (
+            <button key={tb.id} className="tab" aria-current={tab === tb.id ? 'page' : undefined} onClick={() => setTab(tb.id)}>
+              {t(tb.label)}
             </button>
           ))}
         </nav>
 
         <div className="topbar-right">
           {headline && (
-            <button className="headline" onClick={() => setTab('quality')} title={`MAE прогноза на сутки вперёд, % номинала · ${metrics?.holdout ?? ''} · подробнее — вкладка «Качество модели»`}>
-              <span className="eyebrow">Ошибка прогноза на завтра</span>
+            <button
+              className="headline"
+              onClick={() => setTab('quality')}
+              title={t('app.headline.title', { period: metrics?.holdout ?? '' })}
+            >
+              <span className="eyebrow">{t('app.headline.label')}</span>
               <span className="mono">
-                {num(headline.model * 100)} % <span className="muted">vs {num(headline.curve * 100)} % у простого расчёта</span>
+                {num(headline.model * 100)} %{' '}
+                <span className="muted">{t('app.headline.vs', { value: `${num(headline.curve * 100)} %` })}</span>
               </span>
             </button>
           )}
@@ -139,29 +153,23 @@ export default function App() {
               tone={mode === 'live' ? 'live' : 'demo'}
               title={
                 mode === 'live'
-                  ? 'Решения о шагах принимает LLM через вызовы инструментов. Числа считает код.'
-                  : 'Ключ LLM не задан: тот же цикл проходит детерминированный планировщик. Погода, модель и расчёты — настоящие.'
+                  ? t('app.mode.liveTitle')
+                  : t('app.mode.demoTitle')
               }
             >
               <span className="dot" />
               {mode === 'live' ? 'LIVE' : 'DEMO'}
               <span className="hide-sm">
-                {mode === 'live' ? ` · LLM${meta.llm_model ? `: ${meta.llm_model}` : ''}` : ' · без LLM'}
+                {mode === 'live' ? ` · LLM${meta.llm_model ? `: ${meta.llm_model}` : ''}` : ` · ${t('app.mode.withoutLlm')}`}
               </span>
             </Badge>
           ) : (
-            !serverError && <Spinner label="Подключение…" />
+            !serverError && <Spinner label={t('app.connecting')} />
           )}
-          <button
-            className="btn btn-ghost btn-sm"
-            onClick={toggleTheme}
-            aria-label={theme === 'dark' ? 'Светлая тема' : 'Тёмная тема'}
-            title={theme === 'dark' ? 'Светлая тема' : 'Тёмная тема'}
-          >
-            {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
-          </button>
-          <button className="btn btn-ghost btn-sm" onClick={() => setAboutOpen(true)} aria-label="О системе">
-            <Info size={16} /> <span className="hide-sm">О системе</span>
+          <LanguageSelector />
+          <ThemeToggle mode={themeMode} onChange={changeThemeMode} />
+          <button className="btn btn-ghost btn-sm" onClick={() => setAboutOpen(true)} aria-label={t('app.about')}>
+            <Info size={16} /> <span className="hide-sm">{t('app.about')}</span>
           </button>
         </div>
       </header>
@@ -172,28 +180,28 @@ export default function App() {
             tone="error"
             action={
               <button className="btn btn-sm" onClick={connect}>
-                Повторить
+                {t('app.server.retry')}
               </button>
             }
           >
-            Сервер недоступен: {serverError}. Проверьте, что приложение запущено (<code>docker compose up</code>).
+            {t('app.server.unavailable', { error: serverError, command: 'docker compose up' })}
           </Notice>
         </div>
       )}
 
       <main>
         <div hidden={tab !== 'forecast'}>
-          <ErrorBoundary name="Прогноз">
+          <ErrorBoundary name={t('app.tabs.forecast')}>
             <ForecastTab meta={meta} theme={theme} issueDate={issueDate} onIssueDateChange={setIssueDate} />
           </ErrorBoundary>
         </div>
         <div hidden={tab !== 'february'}>
-          <ErrorBoundary name="Февраль 2026">
+          <ErrorBoundary name={t('app.tabs.february')}>
             <FebruaryTab meta={meta} theme={theme} onOpenDate={openForecast} />
           </ErrorBoundary>
         </div>
         <div hidden={tab !== 'quality'}>
-          <ErrorBoundary name="Качество модели">
+          <ErrorBoundary name={t('app.tabs.quality')}>
             <QualityTab
               theme={theme}
               metrics={metrics}
@@ -204,7 +212,7 @@ export default function App() {
           </ErrorBoundary>
         </div>
         <div hidden={tab !== 'project'}>
-          <ErrorBoundary name="О проекте">
+          <ErrorBoundary name={t('app.tabs.project')}>
             <ProjectTab meta={meta} health={health} metrics={metrics} onOpenTab={openTab} />
           </ErrorBoundary>
         </div>

@@ -5,8 +5,9 @@ import { useState } from 'react'
 import { Bot, Check, ChevronDown, CircleCheck, CircleX, Info, RotateCcw, Wrench, X } from 'lucide-react'
 import type { AgentStep, Forecast, Mode } from '../../api/types'
 import { Badge, Spinner } from '../../components/ui'
+import { useT } from '../../i18n'
 import { dateRu, ms } from '../../lib/format'
-import { prettyMaybeJson, stageStatus, STAGES, toolInfo } from '../../lib/steps'
+import { prettyMaybeJson, stageLabel, stageStatus, STAGES, toolInfo } from '../../lib/steps'
 import { prettyDates } from './model'
 
 type LogState = 'idle' | 'running' | 'ready'
@@ -22,6 +23,7 @@ export function AgentLog(props: {
   issueDate: string
   requestMs: number | null
 }) {
+  const { t } = useT()
   const { f, visibleSteps, running } = props
   const state: LogState = running ? 'running' : f ? 'ready' : 'idle'
   const steps = state === 'ready' ? visibleSteps : []
@@ -29,9 +31,9 @@ export function AgentLog(props: {
   const sumMs = total.reduce((a, s) => a + (s.ms || 0), 0)
 
   return (
-    <section className="card fc-log" aria-label="Журнал агента">
+    <section className="card fc-log" aria-label={t('forecast.log.aria')}>
       <div className="fc-log-head">
-        <h2 className="card-title">Журнал агента</h2>
+        <h2 className="card-title">{t('forecast.log.title')}</h2>
         <ModeBadge f={state === 'ready' ? f : null} metaMode={props.metaMode} llmModel={props.llmModel} />
       </div>
 
@@ -39,14 +41,12 @@ export function AgentLog(props: {
 
       <div className="fc-log-body">
         {state === 'idle' && (
-          <p className="fc-log-empty">Агент ждёт задачу. Здесь появятся его шаги и вызовы инструментов.</p>
+          <p className="fc-log-empty">{t('forecast.log.idle')}</p>
         )}
         {state === 'running' && (
           <div className="fc-log-running">
-            <Spinner label={`Агент работает · идёт ${props.elapsed} с`} />
-            <p className="muted small">
-              Журнал придёт целиком вместе с ответом сервера — шаги покажем в том порядке, в каком их выполнил агент.
-            </p>
+            <Spinner label={t('forecast.log.running', { sec: props.elapsed })} />
+            <p className="muted small">{t('forecast.log.runningNote')}</p>
           </div>
         )}
         {state === 'ready' && (
@@ -62,22 +62,22 @@ export function AgentLog(props: {
         <div className="fc-log-foot">
           <div className="fc-log-total">
             {props.replaying ? (
-              <span className="muted">Шаг {steps.length} из {total.length}…</span>
+              <span className="muted">{t('forecast.log.replay', { n: steps.length, total: total.length })}</span>
             ) : (
               <>
-                <CircleCheck size={14} aria-hidden /> Готово · {total.length} {plural(total.length)}
-                {sumMs > 0 ? ` · ${ms(sumMs)}` : props.requestMs != null ? ` · ответ за ${ms(props.requestMs)}` : ''}
+                <CircleCheck size={14} aria-hidden /> {t('forecast.log.done', { count: total.length })}
+                {sumMs > 0 ? ` · ${ms(sumMs)}` : props.requestMs != null ? t('forecast.log.answerIn', { time: ms(props.requestMs) }) : ''}
               </>
             )}
           </div>
           {sumMs === 0 && total.length > 0 && (
-            <p className="fc-log-note">Длительность отдельных шагов не измерялась.</p>
+            <p className="fc-log-note">{t('forecast.log.noMs')}</p>
           )}
         </div>
       )}
       {state === 'idle' && (
         <div className="fc-log-foot">
-          <span className="muted small">Выпуск {dateRu(props.issueDate)}, 23:59 · прогноза ещё нет</span>
+          <span className="muted small">{t('forecast.log.idleFoot', { date: dateRu(props.issueDate) })}</span>
         </div>
       )}
     </section>
@@ -85,51 +85,53 @@ export function AgentLog(props: {
 }
 
 function ModeBadge(props: { f: Forecast | null; metaMode: Mode; llmModel: string | null }) {
+  const { t } = useT()
   const { f } = props
   if (!f) {
     return (
-      <Badge tone="neutral" title="Режим сервера. У каждого прогноза режим указан отдельно.">
+      <Badge tone="neutral" title={t('forecast.log.modeServerTitle')}>
         {props.metaMode === 'live' ? 'LIVE' : 'DEMO'}
       </Badge>
     )
   }
   if (f.mode === 'live' && f.fallback) {
     return (
-      <Badge tone="warn" title="LLM не завершила цикл в этом прогоне, дальше работал детерминированный планировщик">
-        <span className="dot" /> LIVE · резерв: планировщик
+      <Badge tone="warn" title={t('forecast.log.fallbackTitle')}>
+        <span className="dot" /> {t('forecast.log.fallback')}
       </Badge>
     )
   }
   if (f.mode === 'live') {
     return (
-      <Badge tone="live" title="Решения о шагах принимала LLM через вызовы инструментов. Числа считает код.">
+      <Badge tone="live" title={t('forecast.log.liveTitle')}>
         <span className="dot" /> LIVE · LLM{props.llmModel ? `: ${props.llmModel}` : ''}
       </Badge>
     )
   }
   return (
-    <Badge tone="demo" title="Тот же цикл прошёл детерминированный планировщик. Погода, модель и расчёты — настоящие.">
-      <span className="dot" /> DEMO · без LLM
+    <Badge tone="demo" title={t('forecast.log.demoTitle')}>
+      <span className="dot" /> {t('forecast.log.demo')}
     </Badge>
   )
 }
 
 function Stepper(props: { steps: AgentStep[]; running: boolean }) {
+  const { t } = useT()
   return (
-    <ol className="fc-stepper" aria-label="Этапы агентного цикла">
+    <ol className="fc-stepper" aria-label={t('forecast.log.stagesAria')}>
       {STAGES.map((stage) => {
         const st = props.running ? 'running' : stageStatus(props.steps, stage)
         const stageMs = props.steps
           .filter((s) => s.type === 'tool' && (toolInfo(s.name).stage === stage || (stage === 'Прогноз' && s.name === 'run_forecast')))
           .reduce((a, s) => a + (s.ms || 0), 0)
-        const label = { ok: 'готово', error: 'ошибка', pending: 'ожидает', running: 'агент работает' }[st]
+        const label = t(`forecast.log.st.${st}`)
         return (
-          <li key={stage} className={`fc-stage fc-stage-${st}`} title={`${stage}: ${label}`}>
+          <li key={stage} className={`fc-stage fc-stage-${st}`} title={`${stageLabel(stage)}: ${label}`}>
             <span className={`fc-stage-dot ${st === 'running' ? 'pulse' : ''}`} aria-hidden>
               {st === 'ok' && <Check size={12} strokeWidth={3} />}
               {st === 'error' && <X size={12} strokeWidth={3} />}
             </span>
-            <span className="fc-stage-name">{stage}</span>
+            <span className="fc-stage-name">{stageLabel(stage)}</span>
             <span className="fc-stage-ms mono">{st === 'ok' && stageMs > 0 ? ms(stageMs) : ' '}</span>
             <span className="fc-sr-only">{label}</span>
           </li>
@@ -152,13 +154,14 @@ function isRepeat(steps: AgentStep[], index: number): boolean {
 }
 
 function StepRow(props: { step: AgentStep; index: number; repeated: boolean }) {
+  const { t } = useT()
   const { step } = props
   const [open, setOpen] = useState(false)
 
   if (step.type === 'model') {
     const isLlm = step.source != null // ход LLM (live / cache); без source — служебная запись бэкенда
     const text = step.content?.trim()
-    const calls = step.tool_calls?.length ? `вызывает ${step.tool_calls.join(', ')}` : ''
+    const calls = step.tool_calls?.length ? t('forecast.log.calls', { list: step.tool_calls.join(', ') }) : ''
     return (
       <li className={`fc-step fc-step-model ${isLlm ? '' : 'fc-step-service'}`}>
         <div className="fc-step-line">
@@ -166,11 +169,11 @@ function StepRow(props: { step: AgentStep; index: number; repeated: boolean }) {
           <span className="fc-step-text">
             {isLlm ? (
               <>
-                <b>{step.source === 'cache' ? 'LLM (записанный ответ):' : 'LLM:'}</b> {text ? prettyDates(text) : calls || '—'}
+                <b>{step.source === 'cache' ? t('forecast.log.llmCache') : 'LLM:'}</b> {text ? prettyDates(text) : calls || '—'}
                 {text && calls && <span className="fc-step-calls mono"> → {step.tool_calls?.join(', ')}</span>}
               </>
             ) : (
-              text || 'Служебная запись'
+              text || t('forecast.log.service')
             )}
           </span>
           {step.ms > 0 && <span className="fc-step-ms mono">{ms(step.ms)}</span>}
@@ -201,8 +204,8 @@ function StepRow(props: { step: AgentStep; index: number; repeated: boolean }) {
           <span className="fc-step-label">
             {info.label}
             {props.repeated && (
-              <span className="fc-step-repeat" title="Возврат к более раннему этапу цикла">
-                <RotateCcw size={11} /> повтор
+              <span className="fc-step-repeat" title={t('forecast.log.repeatTitle')}>
+                <RotateCcw size={11} /> {t('forecast.log.repeat')}
               </span>
             )}
           </span>
@@ -210,7 +213,7 @@ function StepRow(props: { step: AgentStep; index: number; repeated: boolean }) {
         </span>
         <span className="fc-step-meta">
           {step.ms > 0 && <span className="mono">{ms(step.ms)}</span>}
-          <span className={failed ? 'fc-st-err' : 'fc-st-ok'}>{failed ? 'ошибка' : 'ok'}</span>
+          <span className={failed ? 'fc-st-err' : 'fc-st-ok'}>{failed ? t('forecast.log.error') : 'ok'}</span>
           {expandable && <ChevronDown size={14} className={`fc-chev ${open ? 'fc-chev-open' : ''}`} aria-hidden />}
         </span>
       </button>
@@ -218,13 +221,13 @@ function StepRow(props: { step: AgentStep; index: number; repeated: boolean }) {
         <div className="fc-step-detail" id={id}>
           {args && (
             <>
-              <div className="eyebrow">Аргументы</div>
+              <div className="eyebrow">{t('forecast.log.args')}</div>
               <pre className="fc-pre mono">{args}</pre>
             </>
           )}
           {out && (
             <>
-              <div className="eyebrow">Результат</div>
+              <div className="eyebrow">{t('forecast.log.result')}</div>
               <pre className="fc-pre mono">{out}</pre>
             </>
           )}
@@ -234,10 +237,3 @@ function StepRow(props: { step: AgentStep; index: number; repeated: boolean }) {
   )
 }
 
-function plural(n: number): string {
-  const d = n % 10
-  const dd = n % 100
-  if (d === 1 && dd !== 11) return 'шаг'
-  if (d >= 2 && d <= 4 && (dd < 12 || dd > 14)) return 'шага'
-  return 'шагов'
-}

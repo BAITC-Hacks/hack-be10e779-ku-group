@@ -32,6 +32,7 @@
 .server-error { margin-bottom: 16px; }
 .footer { margin-top: 32px; padding-top: 16px; border-top: 1px solid var(--border); }
 
+@media (max-width: 1439px) { .headline { display: none; } }
 @media (max-width: 1199px) {
   .topbar { grid-template-columns: minmax(0, 1fr) auto; }
   .tabs { grid-column: 1 / -1; grid-row: 2; justify-content: flex-start; overflow-x: auto; }

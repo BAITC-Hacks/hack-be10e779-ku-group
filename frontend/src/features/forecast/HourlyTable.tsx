@@ -3,9 +3,11 @@
 import { Table } from 'lucide-react'
 import type { Forecast } from '../../api/types'
 import { dateTime, num, pct } from '../../lib/format'
+import { useT } from '../../i18n'
 import { hasActual, type ObjectId } from './model'
 
 export function HourlyTable(props: { f: Forecast; object: ObjectId }) {
+  const { t } = useT()
   const { f, object } = props
   const actual = hasActual(f)
   const hl = (o: ObjectId) => (object === o ? 'r fc-col-active' : 'r')
@@ -13,21 +15,22 @@ export function HourlyTable(props: { f: Forecast; object: ObjectId }) {
   return (
     <details className="card fc-table">
       <summary>
-        <Table size={16} aria-hidden /> Таблица по часам <span className="muted">· {f.hours.length} ч, время UTC+5</span>
+        <Table size={16} aria-hidden /> {t('forecast.table.summary')}{' '}
+        <span className="muted">{t('forecast.table.summaryNote', { count: f.hours.length })}</span>
       </summary>
       <div className="table-wrap">
         <table className="data">
           <thead>
             <tr>
-              <th>Время</th>
-              <th>День</th>
-              <th className={hl('station')}>Прогноз</th>
-              <th className="r">Вероятно от–до</th>
-              <th className="r">Кривая</th>
-              <th className={hl('t1')}>Т1</th>
-              <th className={hl('t2')}>Т2</th>
-              <th className="r">Ветер, м/с</th>
-              {actual && <th className="r">Факт</th>}
+              <th>{t('forecast.table.time')}</th>
+              <th>{t('forecast.table.day')}</th>
+              <th className={hl('station')}>{t('forecast.table.forecast')}</th>
+              <th className="r">{t('forecast.table.range')}</th>
+              <th className="r">{t('forecast.table.curve')}</th>
+              <th className={hl('t1')}>{t('forecast.objects.t1Short')}</th>
+              <th className={hl('t2')}>{t('forecast.objects.t2Short')}</th>
+              <th className="r">{t('forecast.table.wind')}</th>
+              {actual && <th className="r">{t('forecast.table.actual')}</th>}
             </tr>
           </thead>
           <tbody>

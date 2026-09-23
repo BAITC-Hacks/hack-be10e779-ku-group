@@ -20,24 +20,17 @@ import type { AboutModalProps } from '../../app/shared'
 import { Badge } from '../../components/ui'
 import { dateRu, num } from '../../lib/format'
 import { STAGES, type Stage } from '../../lib/steps'
+import { useT } from '../../i18n'
 import './about.css'
 
-const STAGE_INFO: Record<Stage, { icon: ReactNode; text: string }> = {
-  Погода: {
-    icon: <CloudDownload size={16} />,
-    text: 'архивный прогноз Open-Meteo, выпущенный до момента прогноза; источники с пропусками данных исключаются',
-  },
-  Подготовка: {
-    icon: <SlidersHorizontal size={16} />,
-    text: 'почасовые признаки: ветер 10 и 100 м, порывы, направление, температура, календарь, ансамбль моделей погоды',
-  },
-  Модель: { icon: <Cpu size={16} />, text: 'квантильный бустинг: p10 / p50 / p90 по станции и прогноз по каждой турбине' },
-  Прогноз: { icon: <ChartLine size={16} />, text: '48 почасовых значений — сутки D+1 и D+2 — с интервалом p10–p90' },
-  Анализ: { icon: <Search size={16} />, text: 'проверки правдоподобия, неуверенности и расхождения источников погоды, объяснение' },
-  Пересчёт: {
-    icon: <RefreshCw size={16} />,
-    text: 'сутки D+1 сравниваются с прогнозом тех же часов из прошлого выпуска (по более старой погоде)',
-  },
+// названия и описания этапов — в словаре about.stages (src/i18n/locales/*/about.ts)
+const STAGE_INFO: Record<Stage, { icon: ReactNode; key: 'weather' | 'prep' | 'model' | 'forecast' | 'analysis' | 'recalc' }> = {
+  Погода: { icon: <CloudDownload size={16} />, key: 'weather' },
+  Подготовка: { icon: <SlidersHorizontal size={16} />, key: 'prep' },
+  Модель: { icon: <Cpu size={16} />, key: 'model' },
+  Прогноз: { icon: <ChartLine size={16} />, key: 'forecast' },
+  Анализ: { icon: <Search size={16} />, key: 'analysis' },
+  Пересчёт: { icon: <RefreshCw size={16} />, key: 'recalc' },
 }
 
 const FOCUSABLE = 'a[href], button:not([disabled]), input:not([disabled]), select, textarea, [tabindex]:not([tabindex="-1"])'
@@ -48,6 +41,7 @@ function coord(v: number, pos: string, neg: string) {
 
 export default function AboutModal(props: AboutModalProps) {
   const { open, meta, health } = props
+  const { t } = useT()
   const dialogRef = useRef<HTMLDivElement>(null)
   const closeRef = useRef<HTMLButtonElement>(null)
   const onClose = useRef(props.onClose)
@@ -105,30 +99,30 @@ export default function AboutModal(props: AboutModalProps) {
       <div className="ab-dialog" role="dialog" aria-modal="true" aria-labelledby="ab-title" aria-describedby="ab-lead" ref={dialogRef}>
         <header className="ab-head">
           <div>
-            <div className="eyebrow">Анемо</div>
+            <div className="eyebrow">{t('app.brand.name')}</div>
             <h2 id="ab-title" className="ab-title">
-              О системе
+              {t('about.title')}
             </h2>
           </div>
-          <button ref={closeRef} className="btn btn-ghost btn-sm ab-close" onClick={props.onClose} aria-label="Закрыть окно «О системе»">
+          <button ref={closeRef} className="btn btn-ghost btn-sm ab-close" onClick={props.onClose} aria-label={t('about.closeAria')}>
             <X size={18} />
           </button>
         </header>
 
-        <div className="ab-body" tabIndex={0} aria-label="Описание системы">
+        <div className="ab-body" tabIndex={0} aria-label={t('about.bodyAria')}>
           <section className="ab-section">
-            <h3>Что делает</h3>
+            <h3>{t('about.what.title')}</h3>
             <p id="ab-lead">
-              Строит почасовой прогноз выработки ветроэлектростанции из двух турбин ({meta.station.name}) на 48 часов —
-              сутки D+1 и D+2 — с интервалом неуверенности p10–p90, по станции и по каждой турбине. Прогнозы воспроизводятся
-              так, как если бы делались в прошлом: выпуски с {dateRu(meta.issue_range.first)} по{' '}
-              {dateRu(meta.issue_range.last)} покрывают весь февраль 2026. Мощность — в % номинала: установленной мощности
-              в МВт в данных нет.
+              {t('about.what.lead', {
+                station: meta.station.name,
+                from: dateRu(meta.issue_range.first),
+                to: dateRu(meta.issue_range.last),
+              })}
             </p>
           </section>
 
           <section className="ab-section">
-            <h3>Агентный цикл</h3>
+            <h3>{t('about.cycle.title')}</h3>
             <ol className="ab-cycle">
               {STAGES.map((s, i) => (
                 <li key={s} className="ab-stage">
@@ -136,114 +130,104 @@ export default function AboutModal(props: AboutModalProps) {
                     {STAGE_INFO[s].icon}
                   </span>
                   <span className="ab-stage-name">
-                    <span className="ab-stage-n mono">{i + 1}</span> {s}
+                    <span className="ab-stage-n mono">{i + 1}</span> {t(`about.stages.${STAGE_INFO[s].key}.name`)}
                   </span>
-                  <span className="ab-stage-text">{STAGE_INFO[s].text}</span>
+                  <span className="ab-stage-text">{t(`about.stages.${STAGE_INFO[s].key}.text`)}</span>
                 </li>
               ))}
             </ol>
             <p className="ab-loop">
               <CornerDownLeft size={16} aria-hidden />
-              <span>
-                Пересчёт → Погода: при свежем выпуске погоды или исключённом источнике прогноз считается заново.
-              </span>
+              <span>{t('about.cycle.loop')}</span>
             </p>
             <div className="ab-modes">
               <div className="ab-mode">
                 <Badge tone="live">LIVE</Badge>
                 <p>
-                  Порядок шагов и исключение источников погоды выбирает LLM через вызовы инструментов
+                  {t('about.cycle.live')}
                   {meta.llm_model ? (
                     <>
                       {' '}
                       (<span className="mono">{meta.llm_model}</span>)
                     </>
                   ) : null}
-                  . Если LLM не завершила цикл — досчитывает планировщик, и это видно в журнале.
+                  {t('about.cycle.liveEnd')}
                 </p>
               </div>
               <div className="ab-mode">
                 <Badge tone="demo">DEMO</Badge>
-                <p>Без ключа тот же цикл выполняет детерминированный планировщик — погода, модель и расчёты настоящие.</p>
+                <p>{t('about.cycle.demo')}</p>
               </div>
             </div>
-            <p className="ab-note">Числа в обоих режимах считает код: LLM не придумывает значения прогноза.</p>
+            <p className="ab-note">{t('about.cycle.note')}</p>
           </section>
 
           <section className="ab-section">
-            <h3>Честность данных</h3>
+            <h3>{t('about.honesty.title')}</h3>
             <ul className="ab-list">
               <li>
-                Момент прогноза — конец дня D, <span className="mono">23:59</span> (время станции).
+                {t('about.honesty.momentBefore')} <span className="mono">23:59</span> {t('about.honesty.momentAfter')}
               </li>
               <li>
-                Сутки D+1 — из прогноза погоды, выпущенного примерно за 24 ч до часа, D+2 — примерно за 48 ч (архив
-                Open-Meteo <span className="mono">previous_day1/2</span>). Время выпуска — по определению архива, задержка
-                публикации не учтена.
+                {t('about.honesty.horizonBefore')} <span className="mono">previous_day1/2</span>
+                {t('about.honesty.horizonAfter')}
               </li>
-              <li>Фактическая погода (наблюдения, реанализ) за прогнозируемые сутки не используется.</li>
-              <li>
-                Факта выработки за февраль 2026 нет — качество проверяется на прошлых месяцах (вкладка «Качество модели»).
-              </li>
+              <li>{t('about.honesty.noActualWeather')}</li>
+              <li>{t('about.honesty.noFebruaryActuals')}</li>
             </ul>
           </section>
 
           <section className="ab-section">
-            <h3>Модель</h3>
+            <h3>{t('about.model.title')}</h3>
             <ul className="ab-list">
-              <li>
-                Градиентный бустинг scikit-learn с квантилями p10 / p50 / p90; отдельные модели для турбин 1 и 2.
-              </li>
-              <li>
-                Признаки — ансамбль погодных моделей: ECMWF, ICON, GFS (ветер 100 и 10 м), JMA, CMA, GEM (ветер 10 м),
-                их среднее и разброс.
-              </li>
-              <li>Интервал p10–p90 дополнительно расширяется конформной калибровкой по режимам ветра.</li>
-              <li>
-                Базовые методы для сравнения: кривая мощности по прогнозному ветру и персистентность («завтра как
-                сегодня»).
-              </li>
+              <li>{t('about.model.boosting')}</li>
+              <li>{t('about.model.features')}</li>
+              <li>{t('about.model.calibration')}</li>
+              <li>{t('about.model.baselines')}</li>
             </ul>
           </section>
 
           <section className="ab-section">
-            <h3>Станция</h3>
+            <h3>{t('about.station.title')}</h3>
             <ul className="ab-turbines">
-              {turbines.map((t) => (
-                <li key={t.id}>
+              {turbines.map((tb) => (
+                <li key={tb.id}>
                   <MapPin size={14} aria-hidden />
-                  <span>Турбина {t.id.replace(/\D/g, '') || t.id}</span>
+                  <span>{t('about.station.turbine', { n: tb.id.replace(/\D/g, '') || tb.id })}</span>
                   <span className="mono">
-                    {coord(t.lat, 'с. ш.', 'ю. ш.')}, {coord(t.lon, 'в. д.', 'з. д.')}
+                    {coord(tb.lat, t('about.station.north'), t('about.station.south'))},{' '}
+                    {coord(tb.lon, t('about.station.east'), t('about.station.west'))}
                   </span>
                 </li>
               ))}
             </ul>
             <p className="ab-note">
-              Время везде — местное станции, UTC{meta.station.utc_offset} (<span className="mono">{meta.station.tz}</span>).
-              История измерений: {dateRu(meta.history_range.first)} — {dateRu(meta.history_range.last)}, шаг 10 минут,
-              усреднение до часа.
+              {t('about.station.time', { offset: meta.station.utc_offset })} (<span className="mono">{meta.station.tz}</span>).{' '}
+              {t('about.station.history', {
+                from: dateRu(meta.history_range.first),
+                to: dateRu(meta.history_range.last),
+              })}
             </p>
           </section>
 
           <section className="ab-section">
-            <h3>Источники и лицензии</h3>
+            <h3>{t('about.sources.title')}</h3>
             <ul className="ab-list">
               <li>
-                Погода —{' '}
+                {t('about.sources.weather')} —{' '}
                 <a href="https://open-meteo.com/en/docs/previous-runs-api" target="_blank" rel="noreferrer noopener">
                   Open-Meteo Previous Runs API <ExternalLink size={12} aria-hidden />
                 </a>
-                , лицензия{' '}
+                , {t('about.sources.license')}{' '}
                 <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noreferrer noopener">
                   CC BY 4.0 <ExternalLink size={12} aria-hidden />
                 </a>
-                . Без ключа; ответы сохранены локально, прогноз работает без сети.
+                {t('about.sources.offline')}
               </li>
-              <li>Данные турбин — организатор хакатона HackAlem AI 2026.</li>
+              <li>{t('about.sources.turbines')}</li>
               {meta.weather_sources.length > 0 && (
                 <li>
-                  Колонки погоды:{' '}
+                  {t('about.sources.columns')}{' '}
                   {meta.weather_sources.map((s, i) => (
                     <span key={s}>
                       {i > 0 && ', '}
@@ -256,30 +240,30 @@ export default function AboutModal(props: AboutModalProps) {
           </section>
 
           <section className="ab-section ab-version">
-            <h3>Версия</h3>
+            <h3>{t('about.version.title')}</h3>
             {health ? (
               <dl className="ab-dl">
                 <div>
-                  <dt>Сборка</dt>
+                  <dt>{t('about.version.build')}</dt>
                   <dd className="mono">{health.commit ?? '—'}</dd>
                 </div>
                 <div>
-                  <dt>Режим</dt>
+                  <dt>{t('about.version.mode')}</dt>
                   <dd>
                     {mode === 'live' ? (
                       <Badge tone="live">LIVE · LLM{meta.llm_model ? `: ${meta.llm_model}` : ''}</Badge>
                     ) : (
-                      <Badge tone="demo">DEMO · без LLM</Badge>
+                      <Badge tone="demo">{t('about.version.demo')}</Badge>
                     )}
                   </dd>
                 </div>
                 <div>
-                  <dt>Сервер</dt>
+                  <dt>{t('about.version.server')}</dt>
                   <dd className="mono">{health.status}</dd>
                 </div>
               </dl>
             ) : (
-              <p className="muted">Нет связи с сервером — версия и режим неизвестны.</p>
+              <p className="muted">{t('about.version.offline')}</p>
             )}
             <p className="ab-note">KU group · HackAlem AI 2026</p>
           </section>

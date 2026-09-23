@@ -2,13 +2,14 @@
 // Данные: GET /api/backtest (v2, готовые CSV; в v1 эндпоинта нет → null) и POST /api/backtest (полный прогон, перезапись CSV).
 // Факта за февраль нет — здесь только прогнозы. Вкладка не размонтируется (App прячет её через hidden), состояние живёт здесь.
 
-import { useEffect, useMemo, useState, type ReactNode } from 'react'
+import { Fragment, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { CalendarDays, Play, RefreshCw } from 'lucide-react'
 import type { FebruaryTabProps } from '../../app/shared'
 import { getBacktest, postBacktest } from '../../api/endpoints'
 import { Badge, Card, Empty, Notice, Skeleton, Spinner } from '../../components/ui'
-import { addDays, dateRu, dateShort, dateTime, num, pct } from '../../lib/format'
-import { daysBetween, ddmm, flagHead, int, mean, normalize, plural, type FebData } from './febData'
+import { addDays, dateRu, dateShort, dateTime, int, num, pct } from '../../lib/format'
+import { useT } from '../../i18n'
+import { daysBetween, ddmm, flagHead, mean, normalize, type FebData } from './febData'
 import { FebCalendar } from './FebCalendar'
 import { FebBarsChart, FebFinalChart } from './FebChart'
 import { FebTable } from './FebTable'
@@ -28,6 +29,14 @@ type Run =
   | { state: 'done'; seconds: number; runs: number; file: string | null }
   | { state: 'failed'; message: string }
 
+/** Строка словаря с {плейсхолдерами} → узлы React (подставляет элементы вместо {name}). */
+function rich(s: string, nodes: Record<string, ReactNode>): ReactNode {
+  return s.split(/(\{\w+\})/).map((part, i) => {
+    const m = /^\{(\w+)\}$/.exec(part)
+    return m && m[1] in nodes ? <Fragment key={i}>{nodes[m[1]]}</Fragment> : part
+  })
+}
+
 /** GET /api/backtest → состояние экрана. null (v1: эндпоинта нет; v2: 404 «не выполнялся») — пустое состояние. */
 async function loadSaved(): Promise<Load> {
   try {
@@ -39,6 +48,7 @@ async function loadSaved(): Promise<Load> {
 }
 
 export default function FebruaryTab({ meta, theme, onOpenDate }: FebruaryTabProps) {
+  const { t } = useT()
   const [load, setLoad] = useState<Load>({ state: 'loading' })
   const [run, setRun] = useState<Run>({ state: 'idle' })
   const [elapsed, setElapsed] = useState(0)
@@ -98,27 +108,32 @@ export default function FebruaryTab({ meta, theme, onOpenDate }: FebruaryTabProp
     return { avg, warnDays, top }
   }, [items])
 
-  const runLabel = `${int(expectedRuns)} ${plural(expectedRuns, ['выпуск', 'выпуска', 'выпусков'])}`
+  const runLabel = t('february.runs', { count: expectedRuns, n: int(expectedRuns) })
 
   // --- панель запуска: подтверждение → прогресс → итог / ошибка ---
   const runPanel: ReactNode = (() => {
     switch (run.state) {
       case 'confirm':
         return (
-          <div className="feb-confirm" role="group" aria-label="Подтверждение прогона">
+          <div className="feb-confirm" role="group" aria-label={t('february.confirm.aria')}>
             <div>
-              <b>{data ? 'Прогнать весь февраль заново?' : 'Прогнать весь февраль?'}</b>
+              <b>{data ? t('february.confirm.again') : t('february.confirm.first')}</b>
               <div className="small muted">
-                Перезапишет <code>outputs/forecast_feb2026.csv</code>, займёт около минуты. {runLabel} подряд, выпуски{' '}
-                {ddmm(meta.issue_range.first)}–{dateRu(meta.issue_range.last)}.
+                {rich(
+                  t('february.confirm.text', {
+                    runs: runLabel,
+                    range: `${ddmm(meta.issue_range.first)}–${dateRu(meta.issue_range.last)}`,
+                  }),
+                  { file: <code>outputs/forecast_feb2026.csv</code> },
+                )}
               </div>
             </div>
             <div className="feb-confirm-actions">
               <button type="button" className="btn btn-primary" onClick={startRun} autoFocus>
-                <Play size={16} aria-hidden /> Запустить
+                <Play size={16} aria-hidden /> {t('february.confirm.start')}
               </button>
               <button type="button" className="btn" onClick={() => setRun({ state: 'idle' })}>
-                Отмена
+                {t('february.confirm.cancel')}
               </button>
             </div>
           </div>
@@ -128,12 +143,8 @@ export default function FebruaryTab({ meta, theme, onOpenDate }: FebruaryTabProp
           <div className="feb-running" role="status" aria-live="polite">
             <Spinner size={18} />
             <div>
-              <b>
-                Идёт прогон: {runLabel} · идёт <span className="mono">{int(elapsed)}</span> с
-              </b>
-              <div className="small muted">
-                Обычно около минуты. Можно переключиться на другие вкладки — результат появится здесь.
-              </div>
+              <b>{rich(t('february.running.title', { runs: runLabel }), { sec: <span className="mono">{int(elapsed)}</span> })}</b>
+              <div className="small muted">{t('february.running.hint')}</div>
             </div>
           </div>
         )
@@ -143,24 +154,18 @@ export default function FebruaryTab({ meta, theme, onOpenDate }: FebruaryTabProp
             tone="error"
             action={
               <button type="button" className="btn btn-sm" onClick={startRun}>
-                Повторить
+                {t('february.retry')}
               </button>
             }
           >
-            Прогон не выполнен: {run.message}
+            {t('february.failed', { error: run.message })}
           </Notice>
         )
       case 'done':
         return (
           <Notice tone="ok">
-            Прогон завершён за {int(run.seconds)} с: {int(run.runs)} {plural(run.runs, ['выпуск', 'выпуска', 'выпусков'])}.{' '}
-            {run.file ? (
-              <>
-                Файл перезаписан: <code>{run.file}</code>
-              </>
-            ) : (
-              'Файл не записан.'
-            )}
+            {t('february.done', { sec: int(run.seconds), runs: t('february.runs', { count: run.runs, n: int(run.runs) }) })}{' '}
+            {run.file ? rich(t('february.fileOverwritten'), { file: <code>{run.file}</code> }) : t('february.fileNotWritten')}
           </Notice>
         )
       default:
@@ -174,7 +179,7 @@ export default function FebruaryTab({ meta, theme, onOpenDate }: FebruaryTabProp
     load.state === 'ready' || load.state === 'error' ? (
       <button type="button" className="btn" onClick={askRun} disabled={running || run.state === 'confirm'}>
         {running ? <Spinner /> : <RefreshCw size={16} aria-hidden />}
-        {data ? 'Прогнать заново' : 'Прогнать весь февраль'}
+        {data ? t('february.rerun') : t('february.runAll')}
       </button>
     ) : null
 
@@ -184,23 +189,18 @@ export default function FebruaryTab({ meta, theme, onOpenDate }: FebruaryTabProp
     <div className="feb">
       <header className="feb-head">
         <div className="feb-head-text">
-          <h1 className="feb-title">Ретроспективный прогон: февраль 2026</h1>
-          <p className="feb-lead">
-            {runLabel}: каждый делается вечером накануне по прогнозу погоды, известному на тот момент, — как будто будущее ещё неизвестно
-          </p>
+          <h1 className="feb-title">{t('february.title')}</h1>
+          <p className="feb-lead">{t('february.lead', { runs: runLabel })}</p>
         </div>
         {headAction && <div className="feb-head-actions">{headAction}</div>}
       </header>
 
-      <Notice tone="info">
-        Факта выработки за февраль 2026 нет — здесь только прогнозы. Качество модели проверено на истории (окт 2025 – янв 2026) — вкладка «Качество
-        модели»
-      </Notice>
+      <Notice tone="info">{t('february.noActual')}</Notice>
 
       {load.state !== 'empty' && runPanel}
 
       {load.state === 'loading' && (
-        <div className="feb-stack" aria-busy="true" aria-label="Загрузка результатов прогона">
+        <div className="feb-stack" aria-busy="true" aria-label={t('february.loadingAria')}>
           <div className="feb-kpis">
             {[0, 1, 2, 3].map((i) => (
               <Skeleton key={i} height={92} />
@@ -218,24 +218,23 @@ export default function FebruaryTab({ meta, theme, onOpenDate }: FebruaryTabProp
           tone="error"
           action={
             <button type="button" className="btn btn-sm" onClick={reload}>
-              Повторить
+              {t('february.retry')}
             </button>
           }
         >
-          Не удалось загрузить результаты прогона: {load.message}
+          {t('february.loadError', { error: load.message })}
         </Notice>
       )}
 
       {load.state === 'empty' && (
         <Card>
-          <Empty icon={<CalendarDays size={28} className="feb-empty-ico" aria-hidden />} title="Результаты прогона ещё не загружены">
+          <Empty icon={<CalendarDays size={28} className="feb-empty-ico" aria-hidden />} title={t('february.empty.title')}>
             <p className="feb-empty-text small">
-              Сервер пока не отдаёт сохранённый прогон. Прогон посчитает {runLabel} заново и запишет{' '}
-              <code>outputs/forecast_feb2026.csv</code>.
+              {rich(t('february.empty.text', { runs: runLabel }), { file: <code>outputs/forecast_feb2026.csv</code> })}
             </p>
             {run.state === 'idle' ? (
               <button type="button" className="btn btn-primary" onClick={askRun}>
-                <Play size={16} aria-hidden /> Прогнать весь февраль
+                <Play size={16} aria-hidden /> {t('february.runAll')}
               </button>
             ) : (
               <div className="feb-empty-run">{runPanel}</div>
@@ -246,117 +245,117 @@ export default function FebruaryTab({ meta, theme, onOpenDate }: FebruaryTabProp
 
       {data && items.length === 0 && (
         <Card>
-          <Empty title="Сервер вернул прогон без выпусков">Попробуйте прогнать февраль заново.</Empty>
+          <Empty title={t('february.noRuns.title')}>{t('february.noRuns.text')}</Empty>
         </Card>
       )}
 
       {data && items.length > 0 && (
         <div className="feb-stack">
-          <section className="card feb-verdict" aria-label="Главное за февраль">
-            <div className="eyebrow">Главное</div>
+          <section className="card feb-verdict" aria-label={t('february.verdict.aria')}>
+            <div className="eyebrow">{t('february.verdict.eyebrow')}</div>
             <p className="feb-verdict-text">
-              В феврале станция в среднем будет работать на <b className="mono">{pct(stats.avg != null ? stats.avg / 24 : null)}</b>{' '}
-              от максимальной мощности. Самые ветреные дни — <b>{ranked.slice(0, 3).map((r) => dateShort(r.d1)).join(', ')}</b>;
-              самые тихие — <b>{ranked.slice(-3).reverse().map((r) => dateShort(r.d1)).join(', ')}</b>.
+              {rich(t('february.verdict.text'), {
+                share: <b className="mono">{pct(stats.avg != null ? stats.avg / 24 : null)}</b>,
+                windy: <b>{ranked.slice(0, 3).map((r) => dateShort(r.d1)).join(', ')}</b>,
+                calm: <b>{ranked.slice(-3).reverse().map((r) => dateShort(r.d1)).join(', ')}</b>,
+              })}
             </p>
-            <p className="small muted">Нажмите на день в календаре или столбец на графике — откроется подробный прогноз.</p>
+            <p className="small muted">{t('february.verdict.hint')}</p>
           </section>
           <div className="feb-kpis">
             <Kpi
-              label="Прогнозов"
+              label={t('february.kpi.runs')}
               value={int(data.runs)}
               sub={`${ddmm(items[0].issue)}–${dateRu(items[items.length - 1].issue)}, 23:59`}
             />
             <Kpi
-              label="В среднем за сутки"
+              label={t('february.kpi.avg')}
               value={
                 <>
                   {num(stats.avg)}
-                  <span className="feb-kpi-unit"> ч</span>
+                  <span className="feb-kpi-unit"> {t('february.unitH')}</span>
                 </>
               }
-              sub={`ч работы на полную мощность ≈ ${pct(stats.avg != null ? stats.avg / 24 : null)} от макс.`}
+              sub={t('february.kpi.avgSub', { share: pct(stats.avg != null ? stats.avg / 24 : null) })}
             />
             <Kpi
-              label="Дней с предупреждениями"
+              label={t('february.kpi.warnDays')}
               value={
                 <>
                   {int(stats.warnDays)}
-                  <span className="feb-kpi-unit"> из {int(items.length)}</span>
+                  <span className="feb-kpi-unit"> {t('february.kpi.of', { n: int(items.length) })}</span>
                 </>
               }
               sub={
                 stats.warnDays === 0 && load.state === 'ready' && load.source === 'saved'
-                  ? 'в сохранённых результатах флагов нет'
+                  ? t('february.kpi.savedNoFlags')
                   : stats.top
-                    ? `чаще всего: ${stats.top[0]} (${int(stats.top[1])} дн.)`
-                    : 'замечаний анализа нет'
+                    ? t('february.kpi.top', { flag: stats.top[0], n: int(stats.top[1]) })
+                    : t('february.kpi.noRemarks')
               }
             />
             <Kpi
-              label="Файл"
-              value={<span className="feb-kpi-file">{data.file ?? 'не записан'}</span>}
+              label={t('february.kpi.file')}
+              value={<span className="feb-kpi-file">{data.file ?? t('february.kpi.notWritten')}</span>}
               sub={
                 data.generatedAt
-                  ? `записан ${dateTime(data.generatedAt)}`
+                  ? t('february.kpi.written', { time: dateTime(data.generatedAt) })
                   : data.finalFile
-                    ? `итоговый ряд: ${data.finalFile}`
+                    ? t('february.kpi.finalSeries', { file: data.finalFile })
                     : load.state === 'ready' && load.source === 'run'
-                      ? 'только что перезаписан прогоном'
+                      ? t('february.kpi.justRewritten')
                       : ''
               }
             />
           </div>
 
           <div className="feb-main">
-            <Card eyebrow="Календарь" title="Прогноз на каждые сутки" className="feb-card-cal">
+            <Card eyebrow={t('february.cal.eyebrow')} title={t('february.cal.title')} className="feb-card-cal">
               <FebCalendar items={items} year={calYear} month={calMonth} onOpen={onOpenDate} />
             </Card>
             <Card
-              eyebrow="Обзор месяца"
-              title="Выработка по дням, ч работы на полную мощность"
-              actions={<Badge tone="neutral">прогноз, не факт</Badge>}
+              eyebrow={t('february.chart.eyebrow')}
+              title={t('february.chart.title')}
+              actions={<Badge tone="neutral">{t('february.chart.badge')}</Badge>}
               className="feb-card-chart"
             >
               <FebBarsChart items={items} theme={theme} onOpen={onOpenDate} />
               <div className="feb-legend small muted">
                 <span>
-                  <i className="feb-sw feb-sw--d1" /> прогноз, сделанный накануне
+                  <i className="feb-sw feb-sw--d1" /> {t('february.chart.legendD1')}
                 </span>
                 <span>
-                  <i className="feb-sw feb-sw--warn" /> есть предупреждения агента
+                  <i className="feb-sw feb-sw--warn" /> {t('february.chart.legendWarn')}
                 </span>
                 {items.some((r) => r.energyD2 != null) && (
                   <span>
-                    <i className="feb-sw feb-sw--d2" /> прогноз на тот же день, сделанный за 2 дня
+                    <i className="feb-sw feb-sw--d2" /> {t('february.chart.legendD2')}
                   </span>
                 )}
-                <span>клик по столбцу — открыть прогноз</span>
+                <span>{t('february.chart.legendClick')}</span>
               </div>
               {data.finalHours.length > 0 && (
                 <div className="feb-final">
-                  <div className="eyebrow">
-                    Весь февраль по часам · {int(data.finalHours.length)} ч · прогноз и вероятный диапазон, % от макс.
-                  </div>
+                  <div className="eyebrow">{t('february.chart.finalTitle', { n: int(data.finalHours.length) })}</div>
                   <FebFinalChart hours={data.finalHours} theme={theme} />
-                  <div className="small muted">Каждый час — из самого свежего прогноза (сделанного накануне).</div>
+                  <div className="small muted">{t('february.chart.finalHint')}</div>
                 </div>
               )}
             </Card>
           </div>
 
-          <Card eyebrow="Выгрузка" title="CSV прогноза февраля">
+          <Card eyebrow={t('february.dl.eyebrow')} title={t('february.dl.title')}>
             <FebDownloads runs={data.runs} />
           </Card>
 
-          <Card eyebrow="Прогнозы" title={`Все прогнозы · ${int(items.length)}`}>
+          <Card eyebrow={t('february.table.eyebrow')} title={t('february.table.title', { n: int(items.length) })}>
             <FebTable items={items} onOpen={onOpenDate} />
           </Card>
         </div>
       )}
 
       {!data && load.state !== 'loading' && (
-        <Card eyebrow="Выгрузка" title="CSV прогноза февраля">
+        <Card eyebrow={t('february.dl.eyebrow')} title={t('february.dl.title')}>
           <FebDownloads runs={expectedRuns} />
         </Card>
       )}

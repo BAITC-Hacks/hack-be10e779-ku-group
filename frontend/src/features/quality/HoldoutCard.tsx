@@ -8,9 +8,10 @@ import type { HistoryPoint, HoldoutPoint } from '../../api/types'
 import type { Theme } from '../../app/shared'
 import { EChart } from '../../components/EChart'
 import { Card, Empty, Notice, Skeleton } from '../../components/ui'
+import { useT } from '../../i18n'
 import { addDays, dateRu, pct } from '../../lib/format'
 import { historyOption, holdoutOption } from './charts'
-import { meanAbsError } from './model'
+import { meanAbsError, rich } from './model'
 
 // выпуски с фактом на обоих сутках: 01.01 … 29.01 (docs/api-contract.md, /api/holdout)
 const FIRST = '2026-01-01'
@@ -36,6 +37,7 @@ async function load(date: string): Promise<View> {
 }
 
 export function HoldoutCard(props: { theme: Theme }) {
+  const { t, locale } = useT()
   const [date, setDate] = useState(DEFAULT_DATE)
   const [attempt, setAttempt] = useState(0)
   const key = `${date}#${attempt}`
@@ -55,10 +57,10 @@ export function HoldoutCard(props: { theme: Theme }) {
 
   const view = result?.key === key ? result.view : null
   const option = useMemo(() => {
-    if (view?.kind === 'holdout') return holdoutOption(view.hours, props.theme)
-    if (view?.kind === 'history') return historyOption(view.points, props.theme)
+    if (view?.kind === 'holdout') return holdoutOption(view.hours, props.theme, locale)
+    if (view?.kind === 'history') return historyOption(view.points, props.theme, locale)
     return null
-  }, [view, props.theme])
+  }, [view, props.theme, locale])
 
   const d1 = addDays(date, 1)
   const d2 = addDays(date, 2)
@@ -70,20 +72,20 @@ export function HoldoutCard(props: { theme: Theme }) {
   return (
     <Card
       className="q-holdout"
-      eyebrow="Январь 2026 · факт есть"
-      title="Прогноз против факта"
+      eyebrow={t('quality.holdout.eyebrow')}
+      title={t('quality.holdout.title')}
       actions={
-        <div className="q-datepick" role="group" aria-label="Дата выпуска прогноза">
+        <div className="q-datepick" role="group" aria-label={t('quality.holdout.dateAria')}>
           <button
             className="btn btn-sm btn-ghost"
             onClick={() => setClamped(addDays(date, -1))}
             disabled={date <= FIRST}
-            aria-label="Предыдущий день"
+            aria-label={t('quality.holdout.prev')}
           >
             <ChevronLeft size={16} />
           </button>
           <label className="q-date">
-            <span className="q-sr-only">Выпуск прогноза</span>
+            <span className="q-sr-only">{t('quality.holdout.issue')}</span>
             <input
               type="date"
               min={FIRST}
@@ -97,7 +99,7 @@ export function HoldoutCard(props: { theme: Theme }) {
             className="btn btn-sm btn-ghost"
             onClick={() => setClamped(addDays(date, 1))}
             disabled={date >= LAST}
-            aria-label="Следующий день"
+            aria-label={t('quality.holdout.next')}
           >
             <ChevronRight size={16} />
           </button>
@@ -105,8 +107,11 @@ export function HoldoutCard(props: { theme: Theme }) {
       }
     >
       <p className="muted small q-holdout-sub">
-        Прогноз сделан <b className="mono">{dateRu(date)} 23:59</b> на <span className="mono">{dateRu(d1)}</span> и{' '}
-        <span className="mono">{dateRu(d2)}</span> · время станции UTC+5
+        {rich(t('quality.holdout.sub'), {
+          issued: <b className="mono">{dateRu(date)} 23:59</b>,
+          d1: <span className="mono">{dateRu(d1)}</span>,
+          d2: <span className="mono">{dateRu(d2)}</span>,
+        })}
       </p>
 
       {view == null && <Skeleton height={300} />}
@@ -116,29 +121,27 @@ export function HoldoutCard(props: { theme: Theme }) {
           tone="error"
           action={
             <button className="btn btn-sm" onClick={() => setAttempt((n) => n + 1)}>
-              <RefreshCw size={14} /> Повторить
+              <RefreshCw size={14} /> {t('quality.holdout.retry')}
             </button>
           }
         >
-          Не удалось загрузить данные за {dateRu(d1)}–{dateRu(d2)}: {view.message}
+          {t('quality.holdout.loadError', { from: dateRu(d1), to: dateRu(d2), error: view.message })}
         </Notice>
       )}
 
       {view?.kind === 'holdout' && (
         <div className="q-holdout-mae" aria-live="polite">
-          <span className="eyebrow">Средняя ошибка за эти 48 ч, % от макс.</span>
-          <span>
-            модель <b className="mono">{pct(view.mae.model, 1)}</b>
-          </span>
+          <span className="eyebrow">{t('quality.holdout.maeTitle')}</span>
+          <span>{rich(t('quality.holdout.maeModel'), { value: <b className="mono">{pct(view.mae.model, 1)}</b> })}</span>
           <span className="muted">
-            простой расчёт по ветру <b className="mono">{pct(view.mae.curve, 1)}</b>
+            {rich(t('quality.holdout.maeCurve'), { value: <b className="mono">{pct(view.mae.curve, 1)}</b> })}
           </span>
         </div>
       )}
 
       {view?.kind === 'history' && (
         <Notice tone="info">
-          Сравнение прогноза с фактом по часам пока недоступно — показан только факт станции.
+          {t('quality.holdout.historyOnly')}
         </Notice>
       )}
 
@@ -149,12 +152,12 @@ export function HoldoutCard(props: { theme: Theme }) {
           theme={props.theme}
           ariaLabel={
             view?.kind === 'holdout'
-              ? `Прогноз и факт выработки станции за ${dateRu(d1)}–${dateRu(d2)}, % номинала`
-              : `Фактическая выработка станции и измеренный ветер за ${dateRu(d1)}–${dateRu(d2)}`
+              ? t('quality.holdout.ariaHoldout', { from: dateRu(d1), to: dateRu(d2) })
+              : t('quality.holdout.ariaHistory', { from: dateRu(d1), to: dateRu(d2) })
           }
         />
       )}
-      {view?.kind === 'history' && !hasActual && <Empty title="За эти сутки нет полных часов факта" />}
+      {view?.kind === 'history' && !hasActual && <Empty title={t('quality.holdout.emptyActual')} />}
     </Card>
   )
 }

@@ -2,6 +2,7 @@
 
 import { Component, type ReactNode } from 'react'
 import { Notice } from './ui'
+import { tr } from '../i18n'
 
 type State = { error: Error | null }
 
@@ -23,11 +24,11 @@ export class ErrorBoundary extends Component<{ name: string; children: ReactNode
         tone="error"
         action={
           <button className="btn btn-sm" onClick={() => this.setState({ error: null })}>
-            Повторить
+            {tr('common.retry')}
           </button>
         }
       >
-        Не удалось показать вкладку «{this.props.name}»: {this.state.error.message}. Остальные вкладки работают.
+        {tr('common.tabError', { name: this.props.name, error: this.state.error.message })}
       </Notice>
     )
   }

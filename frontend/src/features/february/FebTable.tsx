@@ -2,10 +2,12 @@
 
 import { AlertTriangle, ArrowUpRight } from 'lucide-react'
 import { dateRu, hoursFull, num, pct, weekday } from '../../lib/format'
+import { useT } from '../../i18n'
 import { ddmm, flagHead, type FebRun } from './febData'
 
 export function FebTable(props: { items: FebRun[]; onOpen: (issue: string) => void }) {
   const { items, onOpen } = props
+  const { t } = useT()
   const hasD2 = items.some((r) => r.energyD2 != null)
   const hasLow = items.some((r) => r.lowHours != null)
 
@@ -14,15 +16,17 @@ export function FebTable(props: { items: FebRun[]; onOpen: (issue: string) => vo
       <table className="data feb-table">
         <thead>
           <tr>
-            <th>Прогноз сделан</th>
-            <th>Прогноз на</th>
-            <th className="r">На след. день</th>
-            <th className="r" title="Прогноз на тот же день, сделанный за 2 дня">За 2 дня</th>
-            <th className="r" title="Часов с мощностью ниже 5 % от максимальной, из 48">
-              Штиль, ч
+            <th>{t('february.table.issued')}</th>
+            <th>{t('february.table.target')}</th>
+            <th className="r">{t('february.table.d1')}</th>
+            <th className="r" title={t('february.table.d2Title')}>
+              {t('february.table.d2')}
             </th>
-            <th>Предупреждения</th>
-            <th aria-label="Действие" />
+            <th className="r" title={t('february.table.lowTitle')}>
+              {t('february.table.low')}
+            </th>
+            <th>{t('february.table.warns')}</th>
+            <th aria-label={t('february.table.action')} />
           </tr>
         </thead>
         <tbody>
@@ -55,7 +59,7 @@ export function FebTable(props: { items: FebRun[]; onOpen: (issue: string) => vo
                       </span>
                     </span>
                   ) : (
-                    <span className="muted">нет</span>
+                    <span className="muted">{t('february.table.none')}</span>
                   )}
                 </td>
                 <td className="r">
@@ -66,9 +70,9 @@ export function FebTable(props: { items: FebRun[]; onOpen: (issue: string) => vo
                       e.stopPropagation()
                       onOpen(r.issue)
                     }}
-                    aria-label={`Открыть выпуск ${dateRu(r.issue)} на вкладке «Прогноз»`}
+                    aria-label={t('february.table.openAria', { date: dateRu(r.issue) })}
                   >
-                    Открыть <ArrowUpRight size={14} aria-hidden />
+                    {t('february.table.open')} <ArrowUpRight size={14} aria-hidden />
                   </button>
                 </td>
               </tr>

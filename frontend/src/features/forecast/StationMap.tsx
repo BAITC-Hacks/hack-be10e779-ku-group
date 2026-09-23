@@ -9,18 +9,23 @@ import type { Forecast, Meta } from '../../api/types'
 import { Notice } from '../../components/ui'
 import { esc, hoursFull, num } from '../../lib/format'
 import { cssVar } from '../../lib/theme'
+import { tr, useT, type TKey } from '../../i18n'
 import type { ObjectId } from './model'
+import { rich } from './rich'
 
 // Узлы сетки — latitude/longitude из ответов Open-Meteo, сохранённых в data/weather/*.json.
 // Высоты ветра — как в backend/app/forecast/weather.py (у JMA, CMA и GEM в архиве только ветер на 10 м).
-const WEATHER_NODES: { id: string; short: string; label: string; heights: string; lat: number; lon: number }[] = [
-  { id: 'best_match', short: 'Open-Meteo', label: 'Open-Meteo — автовыбор лучшей модели для точки', heights: '10 и 100 м', lat: 43.620384, lon: 78.47891 },
-  { id: 'ecmwf', short: 'ECMWF', label: 'ECMWF (Европа)', heights: '10 и 100 м', lat: 43.75, lon: 78.5 },
-  { id: 'icon', short: 'ICON', label: 'ICON (Германия)', heights: '10 и 100 м', lat: 43.625, lon: 78.5 },
-  { id: 'gfs', short: 'GFS', label: 'GFS (США)', heights: '10 и 100 м', lat: 43.638138, lon: 78.515625 },
-  { id: 'jma', short: 'JMA', label: 'JMA (Япония)', heights: 'только 10 м', lat: 43.5, lon: 78.5 },
-  { id: 'cma', short: 'CMA', label: 'CMA (Китай)', heights: 'только 10 м', lat: 43.6875, lon: 78.5 },
-  { id: 'gem', short: 'GEM', label: 'GEM (Канада)', heights: 'только 10 м', lat: 43.65001, lon: 78.600006 },
+// label и heights — ключи словаря forecast.map.* (переводятся при показе)
+const H2: TKey = 'forecast.map.heights10and100'
+const H1: TKey = 'forecast.map.heights10only'
+const WEATHER_NODES: { id: string; short: string; label: TKey; heights: TKey; lat: number; lon: number }[] = [
+  { id: 'best_match', short: 'Open-Meteo', label: 'forecast.map.nodes.best_match', heights: H2, lat: 43.620384, lon: 78.47891 },
+  { id: 'ecmwf', short: 'ECMWF', label: 'forecast.map.nodes.ecmwf', heights: H2, lat: 43.75, lon: 78.5 },
+  { id: 'icon', short: 'ICON', label: 'forecast.map.nodes.icon', heights: H2, lat: 43.625, lon: 78.5 },
+  { id: 'gfs', short: 'GFS', label: 'forecast.map.nodes.gfs', heights: H2, lat: 43.638138, lon: 78.515625 },
+  { id: 'jma', short: 'JMA', label: 'forecast.map.nodes.jma', heights: H1, lat: 43.5, lon: 78.5 },
+  { id: 'cma', short: 'CMA', label: 'forecast.map.nodes.cma', heights: H1, lat: 43.6875, lon: 78.5 },
+  { id: 'gem', short: 'GEM', label: 'forecast.map.nodes.gem', heights: H1, lat: 43.65001, lon: 78.600006 },
 ]
 
 type View = 'station' | 'weather'
@@ -37,11 +42,12 @@ function km(a: [number, number], b: [number, number]): number {
 }
 
 /** "gfs_ws100" → { gfs: ['ветер 100 м'] }: агент исключает отдельные ряды модели, а не модель целиком. */
-function excludedByNode(excluded: string[] | undefined): Map<string, string[]> {
+// _locale — только чтобы useMemo пересчитывал подписи при смене языка
+function excludedByNode(excluded: string[] | undefined, _locale: string): Map<string, string[]> {
   const out = new Map<string, string[]>()
   for (const s of excluded ?? []) {
     const [id, what = ''] = s.split('_ws')
-    const label = what ? `ветер ${what} м` : s
+    const label = what ? tr('forecast.map.wind', { h: what }) : s
     out.set(id, [...(out.get(id) ?? []), label])
   }
   return out
@@ -60,6 +66,7 @@ export function StationMap(props: {
   onObjectChange: (o: ObjectId) => void
   theme: string
 }) {
+  const { t, locale } = useT()
   const { meta, f, object, onObjectChange, theme } = props
   const box = useRef<HTMLDivElement>(null)
   const map = useRef<L.Map | null>(null)
@@ -79,7 +86,8 @@ export function StationMap(props: {
     return [lat, lon]
   }, [turbines])
 
-  const excluded = useMemo(() => excludedByNode(f?.excluded_sources), [f])
+  // подписи исключённых рядов переводятся — пересчитываем при смене языка
+  const excluded = useMemo(() => excludedByNode(f?.excluded_sources, locale), [f, locale])
   const nodes = useMemo(
     () => WEATHER_NODES.map((n) => ({ ...n, dist: km(center, [n.lat, n.lon]), off: excluded.get(n.id) ?? [] })).sort((a, b) => a.dist - b.dist),
     [center, excluded],
@@ -130,7 +138,7 @@ export function StationMap(props: {
           icon: L.divIcon({ className: `fc-node${off ? ' fc-node-off' : ''}`, html: String(i + 1), iconSize: [22, 22] }),
           keyboard: false,
         })
-          .bindTooltip(`<b>${i + 1}. ${esc(n.label)}</b><br/>${num(n.dist)} км от станции · ветер ${esc(n.heights)}`, {
+          .bindTooltip(`<b>${i + 1}. ${esc(tr(n.label))}</b><br/>${esc(tr('forecast.map.nodeTooltip', { km: num(n.dist), heights: tr(n.heights) }))}`, {
             direction: 'top',
             offset: [0, -10],
           })
@@ -145,7 +153,7 @@ export function StationMap(props: {
           fillColor: cssVar(t.id === 't1' ? '--t1' : '--t2'),
           fillOpacity: 0.9,
         })
-          .bindTooltip(t.id === 't1' ? 'Турбина 1' : 'Турбина 2', { direction: 'top', offset: [0, -6] })
+          .bindTooltip(tr(t.id === 't1' ? 'forecast.objects.t1' : 'forecast.objects.t2'), { direction: 'top', offset: [0, -6] })
           .on('click', () => onPick.current(t.id))
           .addTo(g)
       }
@@ -155,7 +163,7 @@ export function StationMap(props: {
     for (const t of turbines) {
       const color = cssVar(t.id === 't1' ? '--t1' : '--t2')
       const e = turbineEnergy(f, t.id)
-      const label = t.id === 't1' ? 'Турбина 1' : 'Турбина 2'
+      const label = esc(tr(t.id === 't1' ? 'forecast.objects.t1' : 'forecast.objects.t2'))
       const active = object === t.id
       L.circleMarker([t.lat, t.lon], {
         radius: active ? 12 : 9,
@@ -167,13 +175,13 @@ export function StationMap(props: {
         .bindTooltip(label, { permanent: true, direction: 'right', className: 'fc-map-label' })
         .bindPopup(
           `<b>${label}</b><br/>${num(t.lat, 5)}, ${num(t.lon, 5)}` +
-            (e != null ? `<br/>завтра: ${hoursFull(e)} работы на полной мощности` : '') +
-            '<br/><i>график переключён на эту турбину</i>',
+            (e != null ? `<br/>${esc(tr('forecast.map.popupTomorrow', { hours: hoursFull(e) }))}` : '') +
+            `<br/><i>${esc(tr('forecast.map.popupSwitched'))}</i>`,
         )
         .on('click', () => onPick.current(t.id))
         .addTo(g)
     }
-  }, [f, object, theme, turbines, center, view, nodes])
+  }, [f, object, theme, turbines, center, view, nodes, locale])
 
   // масштаб: станция крупно или все погодные узлы
   useEffect(() => {
@@ -194,21 +202,21 @@ export function StationMap(props: {
   const far = nodes.filter((n) => n.dist >= NEAR_KM)
 
   return (
-    <section className="card fc-map-card" aria-label="Станция на карте">
+    <section className="card fc-map-card" aria-label={t('forecast.map.aria')}>
       <div className="card-head">
         <div>
-          <div className="eyebrow">Станция на карте</div>
+          <div className="eyebrow">{t('forecast.map.eyebrow')}</div>
           <h2 className="card-title">
             {meta.station.name}
-            {gap != null ? ` · турбины в ${Math.round(gap * 1000)} м друг от друга` : ''}
+            {gap != null ? t('forecast.map.gap', { m: Math.round(gap * 1000) }) : ''}
           </h2>
         </div>
-        <div className="segmented" role="group" aria-label="Что показать на карте">
+        <div className="segmented" role="group" aria-label={t('forecast.map.viewAria')}>
           <button aria-pressed={view === 'station'} onClick={() => setView('station')}>
-            Турбины
+            {t('forecast.map.turbines')}
           </button>
           <button aria-pressed={view === 'weather'} onClick={() => setView('weather')}>
-            Откуда погода
+            {t('forecast.map.weather')}
           </button>
         </div>
       </div>
@@ -219,54 +227,53 @@ export function StationMap(props: {
       <div className="fc-map-hint">
         {view === 'weather' && (
           <>
-            <i className="fc-map-dot" style={{ background: 'var(--t1)' }} /> Т1{' '}
-            <i className="fc-map-dot" style={{ background: 'var(--t2)' }} /> Т2 · <i className="fc-node fc-legend-node">1</i> узел погодной
-            модели (пунктир — исключён агентом) ·{' '}
+            <i className="fc-map-dot" style={{ background: 'var(--t1)' }} /> {t('forecast.objects.t1Short')}{' '}
+            <i className="fc-map-dot" style={{ background: 'var(--t2)' }} /> {t('forecast.objects.t2Short')} ·{' '}
+            {rich(t('forecast.map.legend'), { node: <i className="fc-node fc-legend-node">1</i> })}
           </>
         )}
-        приблизить: «+», двойной клик или колесо мыши после клика по карте
+        {t('forecast.map.zoom')}
       </div>
 
       {view === 'station' ? (
-        <p className="fc-map-text">
-          Нажмите на турбину — график и цифры выше переключатся на её прогноз. Вернуться к станции целиком — переключатель
-          «Станция» вверху страницы.
-        </p>
+        <p className="fc-map-text">{t('forecast.map.stationText')}</p>
       ) : (
         <div className="fc-map-text">
           <p>
-            Прогноз погоды считают не для каждой точки, а на сетке: у каждой погодной модели свой ближайший к станции узел
-            {nearest ? ` (самый близкий — ${nearest.short}, ${num(nearest.dist)} км)` : ''}. Агент берёт прогноз ветра из
-            7 источников — 6 моделей мировых метеоцентров и автовыбор Open-Meteo — и отбрасывает те, у которых нет данных на
-            нужные часы (больше 4 ч пропусков). Номер на карте = строка в таблице
-            {far.length > 0 && ` (${far.map((n) => n.short).join(' и ')} — дальше ${NEAR_KM} км, отдалите карту)`}. Чем сильнее модели
-            расходятся между собой, тем шире интервал неуверенности на графике.
+            {t('forecast.map.weatherText1')}
+            {nearest ? t('forecast.map.nearest', { name: nearest.short, km: num(nearest.dist) }) : ''}
+            {t('forecast.map.weatherText2')}
+            {far.length > 0 &&
+              t('forecast.map.far', { list: far.map((n) => n.short).join(t('forecast.map.farJoin')), km: NEAR_KM })}
+            {t('forecast.map.weatherText3')}
           </p>
           <div className="table-wrap">
             <table className="data">
               <thead>
                 <tr>
-                  <th>№</th>
-                  <th>Источник прогноза погоды</th>
-                  <th className="r">До станции</th>
-                  <th>Ветер</th>
-                  <th>В этом прогнозе</th>
+                  <th>{t('forecast.map.colNo')}</th>
+                  <th>{t('forecast.map.colSource')}</th>
+                  <th className="r">{t('forecast.map.colDist')}</th>
+                  <th>{t('forecast.map.colWind')}</th>
+                  <th>{t('forecast.map.colUsed')}</th>
                 </tr>
               </thead>
               <tbody>
                 {nodes.map((n, i) => (
                   <tr key={n.id}>
                     <td className="mono">{i + 1}</td>
-                    <td>{n.label}</td>
-                    <td className="r">{num(n.dist)} км</td>
-                    <td>{n.heights}</td>
+                    <td>{t(n.label)}</td>
+                    <td className="r">
+                      {num(n.dist)} {t('forecast.unit.km')}
+                    </td>
+                    <td>{t(n.heights)}</td>
                     <td>
                       {!f ? (
                         <span className="muted">—</span>
                       ) : n.off.length ? (
-                        <span className="fc-map-off">исключено агентом: {n.off.join(', ')}</span>
+                        <span className="fc-map-off">{t('forecast.map.excluded', { list: n.off.join(', ') })}</span>
                       ) : (
-                        <span className="fc-map-on">используется</span>
+                        <span className="fc-map-on">{t('forecast.map.used')}</span>
                       )}
                     </td>
                   </tr>
@@ -278,7 +285,7 @@ export function StationMap(props: {
       )}
 
       {tilesFailed && (
-        <Notice tone="info">Подложка карты не загрузилась (нет доступа к OpenStreetMap) — точки нанесены по координатам.</Notice>
+        <Notice tone="info">{t('forecast.map.tilesFailed')}</Notice>
       )}
     </section>
   )

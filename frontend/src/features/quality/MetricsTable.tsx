@@ -1,29 +1,31 @@
 // Таблица метрик по горизонтам (строки покрытия сюда не входят — они в блоке интервала).
 
 import { CircleCheck } from 'lucide-react'
-import { pct } from '../../lib/format'
-import { intRu, KIND_COLOR, type LeadGroup, methodLabel } from './model'
+import { useT } from '../../i18n'
+import { int, pct } from '../../lib/format'
+import { KIND_COLOR, type LeadGroup, leadShort, methodLabel } from './model'
 
 export function MetricsTable(props: { groups: LeadGroup[]; holdout: string }) {
+  const { t } = useT()
   return (
     <>
       <div className="table-wrap">
         <table className="data q-table">
-          <caption className="q-sr-only">Ошибки прогноза по горизонтам и методам, период: {props.holdout}</caption>
+          <caption className="q-sr-only">{t('quality.table.caption', { period: props.holdout })}</caption>
           <thead>
             <tr>
-              <th scope="col">На когда</th>
-              <th scope="col">Метод</th>
+              <th scope="col">{t('quality.table.lead')}</th>
+              <th scope="col">{t('quality.table.method')}</th>
               <th scope="col" className="r">
-                Часов
+                {t('quality.table.hours')}
               </th>
-              <th scope="col" className="r" title="Средняя абсолютная ошибка, % номинала">
-                MAE<span className="q-unit">% ном.</span>
+              <th scope="col" className="r" title={t('quality.table.maeTitle')}>
+                MAE<span className="q-unit">{t('quality.table.unitNom')}</span>
               </th>
-              <th scope="col" className="r" title="Корень из средней квадратичной ошибки, % номинала">
-                RMSE<span className="q-unit">% ном.</span>
+              <th scope="col" className="r" title={t('quality.table.rmseTitle')}>
+                RMSE<span className="q-unit">{t('quality.table.unitNom')}</span>
               </th>
-              <th scope="col" className="r" title="MAE, делённая на среднюю фактическую выработку">
+              <th scope="col" className="r" title={t('quality.table.nmaeTitle')}>
                 nMAE<span className="q-unit">%</span>
               </th>
             </tr>
@@ -36,7 +38,7 @@ export function MetricsTable(props: { groups: LeadGroup[]; holdout: string }) {
                   <tr key={r.name} className={best ? 'q-best' : undefined}>
                     {i === 0 && (
                       <th scope="rowgroup" rowSpan={g.rows.length} className="q-lead">
-                        {g.lead === 'D+1' ? 'завтра' : g.lead === 'D+2' ? 'послезавтра' : g.lead}
+                        {leadShort(g.lead)}
                       </th>
                     )}
                     <td>
@@ -45,12 +47,12 @@ export function MetricsTable(props: { groups: LeadGroup[]; holdout: string }) {
                         <span title={r.name}>{methodLabel(r.name, r.kind)}</span>
                         {best && (
                           <span className="q-best-tag">
-                            <CircleCheck size={14} aria-hidden /> лучший
+                            <CircleCheck size={14} aria-hidden /> {t('quality.table.best')}
                           </span>
                         )}
                       </span>
                     </td>
-                    <td className="r mono">{intRu(r.hours)}</td>
+                    <td className="r mono">{int(r.hours)}</td>
                     <td className="r mono">{pct(r.mae, 1)}</td>
                     <td className="r mono">{pct(r.rmse, 1)}</td>
                     <td className="r mono">{pct(r.nmae, 1)}</td>
@@ -65,27 +67,27 @@ export function MetricsTable(props: { groups: LeadGroup[]; holdout: string }) {
       <dl className="q-defs">
         <div>
           <dt>MAE</dt>
-          <dd>средняя абсолютная ошибка по часам, в % номинальной мощности (мощность в данных нормирована 0–1).</dd>
+          <dd>{t('quality.table.defs.mae')}</dd>
         </div>
         <div>
           <dt>RMSE</dt>
-          <dd>корень из средней квадратичной ошибки, % номинала — сильнее штрафует крупные промахи.</dd>
+          <dd>{t('quality.table.defs.rmse')}</dd>
         </div>
         <div>
           <dt>nMAE</dt>
-          <dd>MAE, делённая на среднюю фактическую выработку за период проверки.</dd>
+          <dd>{t('quality.table.defs.nmae')}</dd>
         </div>
         <div>
-          <dt>Часов</dt>
-          <dd>сколько часов вошло в оценку: есть и архивный прогноз погоды, и факт выработки.</dd>
+          <dt>{t('quality.table.hours')}</dt>
+          <dd>{t('quality.table.defs.hours')}</dd>
         </div>
         <div>
-          <dt>Кривая мощности</dt>
-          <dd>медиана мощности станции по скорости ветра на истории, применённая к прогнозному ветру на 100 м.</dd>
+          <dt>{t('quality.table.defs.curveTerm')}</dt>
+          <dd>{t('quality.table.defs.curve')}</dd>
         </div>
         <div>
-          <dt>Персистентность</dt>
-          <dd>«завтра как сегодня»: повтор фактической выработки последних известных суток.</dd>
+          <dt>{t('quality.table.defs.persistTerm')}</dt>
+          <dd>{t('quality.table.defs.persist')}</dd>
         </div>
       </dl>
     </>

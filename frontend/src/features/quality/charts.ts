@@ -1,10 +1,12 @@
-// Опции ECharts для вкладки «Качество». Цвета — только из CSS-переменных темы (cssVar); вызывать в useMemo с theme в зависимостях.
+// Опции ECharts для вкладки «Качество». Цвета — только из CSS-переменных темы (cssVar); подписи — tr() на текущем языке;
+// вызывать в useMemo с theme и locale в зависимостях (locale не читается — это ключ пересчёта, как theme в readColors).
 
 import type { HistoryPoint, HoldoutPoint } from '../../api/types'
 import type { Theme } from '../../app/shared'
 import type { ChartOption } from '../../components/EChart'
 import { dateRu, dateTime, hourOf, num, pct } from '../../lib/format'
 import { cssVar } from '../../lib/theme'
+import { tr, type Locale } from '../../i18n'
 import { KIND_COLOR, methodLabel, type LeadGroup, type MethodKind } from './model'
 
 type Colors = ReturnType<typeof readColors>
@@ -83,7 +85,7 @@ function powerAxis(c: Colors) {
     min: 0,
     max: 100,
     interval: 25,
-    name: '% номинала',
+    name: tr('quality.chart.powerAxis'),
     nameTextStyle: { color: c.text3, fontFamily: c.font, fontSize: 11, align: 'left' },
     axisLabel: { color: c.text2, fontFamily: c.mono, fontSize: 11, formatter: '{value} %' },
     splitLine: { lineStyle: { color: c.border } },
@@ -92,7 +94,7 @@ function powerAxis(c: Colors) {
 
 // ---------- MAE по методам, D+1 и D+2 ----------
 
-export function maeBarsOption(groups: LeadGroup[], theme: Theme): ChartOption {
+export function maeBarsOption(groups: LeadGroup[], theme: Theme, _locale: Locale): ChartOption {
   const c = readColors(theme)
   const leads = groups.map((g) => g.lead)
   // серии — методы в порядке модель / кривая / персистентность / прочие (по названию из API)
@@ -109,7 +111,7 @@ export function maeBarsOption(groups: LeadGroup[], theme: Theme): ChartOption {
       ...tooltipBase(c),
       axisPointer: { type: 'shadow', shadowStyle: { color: c.band, opacity: 0.4 } },
       formatter: (ps: { axisValue: string; seriesName: string; value: number | null; color: string }[]) =>
-        `<div style="margin-bottom:4px">Сутки ${esc(ps[0]?.axisValue ?? '')} · MAE, % номинала</div>` +
+        `<div style="margin-bottom:4px">${esc(tr('quality.chart.maeTooltip', { lead: ps[0]?.axisValue ?? '' }))}</div>` +
         ps.map((p) => row(dot(p.color), p.seriesName, p.value == null ? '—' : `${num(p.value, 1)} %`)).join(''),
     },
     xAxis: {
@@ -117,12 +119,12 @@ export function maeBarsOption(groups: LeadGroup[], theme: Theme): ChartOption {
       data: leads,
       axisLine: { lineStyle: { color: c.border } },
       axisTick: { show: false },
-      axisLabel: { color: c.text, fontFamily: c.mono, fontSize: 12, formatter: (v: string) => `Сутки ${v}` },
+      axisLabel: { color: c.text, fontFamily: c.mono, fontSize: 12, formatter: (v: string) => tr('quality.chart.day', { lead: v }) },
     },
     yAxis: {
       type: 'value',
       min: 0,
-      name: 'MAE, % номинала',
+      name: tr('quality.chart.maeAxis'),
       nameTextStyle: { color: c.text3, fontFamily: c.font, fontSize: 11, align: 'left' },
       axisLabel: { color: c.text2, fontFamily: c.mono, fontSize: 11, formatter: '{value} %' },
       splitLine: { lineStyle: { color: c.border } },
@@ -148,11 +150,14 @@ export function maeBarsOption(groups: LeadGroup[], theme: Theme): ChartOption {
 
 // ---------- прогноз против факта (P1 /api/holdout) ----------
 
-export function holdoutOption(hours: HoldoutPoint[], theme: Theme): ChartOption {
+export function holdoutOption(hours: HoldoutPoint[], theme: Theme, _locale: Locale): ChartOption {
   const c = readColors(theme)
   const times = hours.map((h) => h.time)
   const d2 = hours.find((h) => h.lead_day === 2)?.time
-  const BAND = 'Интервал p10–p90'
+  const BAND = tr('quality.chart.band')
+  const ACTUAL = tr('quality.chart.actual')
+  const P50 = tr('quality.chart.p50')
+  const CURVE = tr('quality.chart.curve')
   const line = (color: string, width: number, dashed = false) => ({
     type: 'line',
     symbol: 'none',
@@ -165,7 +170,7 @@ export function holdoutOption(hours: HoldoutPoint[], theme: Theme): ChartOption 
     grid: { left: 52, right: 16, top: 56, bottom: 28 },
     legend: {
       ...legendBase(c),
-      data: ['Факт', 'Прогноз p50', { name: BAND, icon: 'roundRect', itemStyle: { color: c.band } }, 'Кривая мощности'],
+      data: [ACTUAL, P50, { name: BAND, icon: 'roundRect', itemStyle: { color: c.band } }, CURVE],
     },
     tooltip: {
       ...tooltipBase(c),
@@ -173,11 +178,11 @@ export function holdoutOption(hours: HoldoutPoint[], theme: Theme): ChartOption 
         const h = hours[ps[0]?.dataIndex ?? -1]
         if (!h) return ''
         return (
-          `<div style="margin-bottom:4px">${esc(dateTime(h.time))} · сутки D+${h.lead_day}</div>` +
-          row(dot(c.actual), 'Факт', pct(h.actual)) +
-          row(dot(c.primary), 'Прогноз p50', pct(h.p50)) +
+          `<div style="margin-bottom:4px">${esc(tr('quality.chart.tooltipLead', { time: dateTime(h.time), day: h.lead_day }))}</div>` +
+          row(dot(c.actual), ACTUAL, pct(h.actual)) +
+          row(dot(c.primary), P50, pct(h.p50)) +
           row(`<span style="display:inline-block;width:10px;height:8px;border-radius:2px;background:${c.band};border:1px solid ${c.primary};margin-right:6px"></span>`, BAND, `${pct(h.p10)} – ${pct(h.p90)}`) +
-          row(dot(c.curve, true), 'Кривая мощности', pct(h.curve))
+          row(dot(c.curve, true), CURVE, pct(h.curve))
         )
       },
     },
@@ -195,10 +200,10 @@ export function holdoutOption(hours: HoldoutPoint[], theme: Theme): ChartOption 
         silent: true,
         data: hours.map((h) => (h.p90 == null || h.p10 == null ? null : toPct(h.p90 - h.p10))),
       },
-      { ...line(c.curve, 1.5, true), name: 'Кривая мощности', data: hours.map((h) => toPct(h.curve)) },
+      { ...line(c.curve, 1.5, true), name: CURVE, data: hours.map((h) => toPct(h.curve)) },
       {
         ...line(c.primary, 2),
-        name: 'Прогноз p50',
+        name: P50,
         data: hours.map((h) => toPct(h.p50)),
         markLine: d2
           ? {
@@ -210,22 +215,23 @@ export function holdoutOption(hours: HoldoutPoint[], theme: Theme): ChartOption 
             }
           : undefined,
       },
-      { ...line(c.actual, 2), name: 'Факт', data: hours.map((h) => toPct(h.actual)) },
+      { ...line(c.actual, 2), name: ACTUAL, data: hours.map((h) => toPct(h.actual)) },
     ],
   }
 }
 
 // ---------- только факт станции (пока нет /api/holdout) ----------
 
-export function historyOption(points: HistoryPoint[], theme: Theme): ChartOption {
+export function historyOption(points: HistoryPoint[], theme: Theme, _locale: Locale): ChartOption {
   const c = readColors(theme)
   const times = points.map((p) => p.time)
   const d2 = times.find((t) => t.slice(0, 10) !== times[0]?.slice(0, 10)) // первый час вторых суток
-  const WIND = 'Ветер на турбинах (измерен), м/с'
+  const WIND = tr('quality.chart.wind')
+  const ACTUAL = tr('quality.chart.actual')
 
   return {
     grid: { left: 52, right: 44, top: 56, bottom: 28 },
-    legend: { ...legendBase(c), data: ['Факт', WIND] },
+    legend: { ...legendBase(c), data: [ACTUAL, WIND] },
     tooltip: {
       ...tooltipBase(c),
       formatter: (ps: { dataIndex: number }[]) => {
@@ -233,8 +239,8 @@ export function historyOption(points: HistoryPoint[], theme: Theme): ChartOption
         if (!p) return ''
         return (
           `<div style="margin-bottom:4px">${esc(dateTime(p.time))}</div>` +
-          row(dot(c.actual), 'Факт', pct(p.actual)) +
-          row(dot(c.wind), 'Ветер (измерен)', p.wind_measured == null ? '—' : `${num(p.wind_measured)} м/с`)
+          row(dot(c.actual), ACTUAL, pct(p.actual)) +
+          row(dot(c.wind), tr('quality.chart.windShort'), p.wind_measured == null ? '—' : tr('quality.chart.windValue', { value: num(p.wind_measured) }))
         )
       },
     },
@@ -244,7 +250,7 @@ export function historyOption(points: HistoryPoint[], theme: Theme): ChartOption
       {
         type: 'value',
         min: 0,
-        name: 'м/с',
+        name: tr('quality.chart.ms'),
         nameTextStyle: { color: c.text3, fontFamily: c.font, fontSize: 11 },
         axisLabel: { color: c.text2, fontFamily: c.mono, fontSize: 11 },
         splitLine: { show: false },
@@ -263,7 +269,7 @@ export function historyOption(points: HistoryPoint[], theme: Theme): ChartOption
       },
       {
         type: 'line',
-        name: 'Факт',
+        name: ACTUAL,
         symbol: 'none',
         connectNulls: false,
         itemStyle: { color: c.actual },

@@ -5,6 +5,22 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Анемо — агентный прогноз выработки ВЭС</title>
+    <!-- тема и язык до загрузки JS: без белой вспышки в тёмной теме (логика — как в src/lib/themeManager.ts и src/i18n/core.ts) -->
+    <script>
+      (function () {
+        var d = document.documentElement, mode = 'system', lang = null
+        try {
+          mode = localStorage.getItem('theme-mode') || localStorage.getItem('theme') || 'system'
+          lang = localStorage.getItem('lang')
+        } catch (e) {}
+        var t = mode === 'light' || mode === 'dark' ? mode
+          : (window.matchMedia ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : 'dark')
+        d.setAttribute('data-theme', t)
+        d.style.colorScheme = t
+        if (lang === 'kk' || lang === 'ru' || lang === 'en') d.lang = lang
+      })()
+    </script>
+    <style>html { background: #0a1214 } html[data-theme='light'] { background: #eef3f3 }</style>
   </head>
   <body>
     <div id="root"></div>

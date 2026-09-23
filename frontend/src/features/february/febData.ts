@@ -76,30 +76,13 @@ export function monthGrid(year: number, month: number): CalCell[] {
   return cells
 }
 
-export const WEEK_RU = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс']
-
-const MONTHS_NOM = ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь', 'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь']
-export const monthTitle = (year: number, month: number) => `${MONTHS_NOM[month - 1]} ${year}`
+/** Дни недели, понедельник первым — ключи словаря february.cal.week. */
+export const WEEK_KEYS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'] as const
 
 /** "2026-02-10" → «10.02». */
 export function ddmm(s: string): string {
   const [, m, d] = s.slice(0, 10).split('-')
   return `${d}.${m}`
-}
-
-/** Целое с разделителем разрядов: 1344 → «1 344» (в lib/format такого нет). */
-export function int(n: number): string {
-  return Math.round(n).toLocaleString('ru-RU')
-}
-
-/** Русское склонение: plural(1344, ['строка', 'строки', 'строк']) → «строки». */
-export function plural(n: number, forms: [string, string, string]): string {
-  const a = Math.abs(Math.round(n)) % 100
-  const b = a % 10
-  if (a > 10 && a < 20) return forms[2]
-  if (b === 1) return forms[0]
-  if (b >= 2 && b <= 4) return forms[1]
-  return forms[2]
 }
 
 /** Короткая подпись флага: всё до «:», «—» или «(» — «Высокая неопределённость». */

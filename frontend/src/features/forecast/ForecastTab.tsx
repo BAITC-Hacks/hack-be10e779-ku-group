@@ -8,6 +8,7 @@ import { getForecast, postForecast } from '../../api/endpoints'
 import type { Forecast } from '../../api/types'
 import type { ForecastTabProps } from '../../app/shared'
 import { Badge, Empty, Notice, Skeleton, Spinner } from '../../components/ui'
+import { tr, useT } from '../../i18n'
 import { dateRu, dateTime, ms } from '../../lib/format'
 import { AgentLog } from './AgentLog'
 import { ControlPanel } from './ControlPanel'
@@ -33,11 +34,12 @@ function without<T>(rec: Record<string, T>, key: string): Record<string, T> {
 
 function errorText(e: unknown): string {
   if (e instanceof ApiError) return e.message
-  if (e instanceof Error) return `Нет связи с сервером (${e.message})`
-  return 'Неизвестная ошибка'
+  if (e instanceof Error) return tr('forecast.errors.noConnection', { message: e.message })
+  return tr('forecast.errors.unknown')
 }
 
 export default function ForecastTab(props: ForecastTabProps) {
+  const { t } = useT()
   const { meta, theme, issueDate, onIssueDateChange } = props
   const first = meta.issue_range.first
   const last = meta.issue_range.last
@@ -149,25 +151,25 @@ export default function ForecastTab(props: ForecastTabProps) {
         <KpiRow f={shown} object={object} issueDate={issueDate} loading={runningHere || lookingUp} />
       </div>
 
-      <section className="card fc-area-chart fc-chart-card" aria-label="График прогноза">
+      <section className="card fc-area-chart fc-chart-card" aria-label={t('forecast.chart.aria')}>
         <div className="fc-chart-head">
           <div>
-            <div className="eyebrow">По часам · 48 ч · местное время UTC+5</div>
+            <div className="eyebrow">{t('forecast.chart.eyebrow')}</div>
             <h2 className="card-title">
-              Мощность, % от максимальной · {objectLabel(object)}
+              {t('forecast.chart.title', { object: objectLabel(object) })}
               <span className="muted fc-chart-days">
                 {' '}
-                · {ddmm(d1)} и {ddmm(d2)}
+                · {t('forecast.chart.days', { d1: ddmm(d1), d2: ddmm(d2) })}
               </span>
             </h2>
           </div>
           {shown && (
             <div className="fc-chart-meta">
-              {object !== 'station' && <span className="fc-chart-hint">вероятный диапазон считается только для станции</span>}
+              {object !== 'station' && <span className="fc-chart-hint">{t('forecast.chart.bandOnlyStation')}</span>}
               {requestMs[issueDate] != null ? (
-                <Badge tone="ok">Прогноз готов · {ms(requestMs[issueDate])}</Badge>
+                <Badge tone="ok">{t('forecast.chart.ready', { time: ms(requestMs[issueDate]) })}</Badge>
               ) : shown.computed_at ? (
-                <Badge tone="neutral">Сохранённый прогноз · {dateTime(shown.computed_at)}</Badge>
+                <Badge tone="neutral">{t('forecast.chart.saved', { time: dateTime(shown.computed_at) })}</Badge>
               ) : null}
             </div>
           )}
@@ -178,39 +180,35 @@ export default function ForecastTab(props: ForecastTabProps) {
             tone="error"
             action={
               <button type="button" className="btn btn-sm" onClick={run} disabled={running != null}>
-                Повторить
+                {t('forecast.chart.retry')}
               </button>
             }
           >
-            Прогноз на выпуск {dateRu(issueDate)} не получен: {error}
-            {f && <span className="fc-notice-sub">Ниже — предыдущий успешный прогноз на эту дату.</span>}
+            {t('forecast.chart.failed', { date: dateRu(issueDate), error })}
+            {f && <span className="fc-notice-sub">{t('forecast.chart.previousBelow')}</span>}
           </Notice>
         )}
 
         {runningHere ? (
           <div className="fc-loading" role="status">
             <span className="fc-loading-spin" aria-hidden>
-              <Spinner size={20} label={`Агент работает · идёт ${elapsed} с`} />
+              <Spinner size={20} label={t('forecast.chart.agentWorking', { sec: elapsed })} />
             </span>
-            <span className="fc-sr-only">Агент работает, прогноз считается</span>
-            <p>
-              Агент получает архивный прогноз погоды, выпущенный не позже {ddmm(issueDate)} 23:59, готовит признаки, запускает
-              модель, анализирует результат и сравнивает его с прошлым выпуском.
-            </p>
-            <p className="muted small">Первый прогноз может занять около минуты — модель обучается.</p>
+            <span className="fc-sr-only">{t('forecast.chart.agentWorkingSr')}</span>
+            <p>{t('forecast.chart.loadingText', { date: ddmm(issueDate) })}</p>
+            <p className="muted small">{t('forecast.chart.firstRunNote')}</p>
           </div>
         ) : shown ? (
           <ForecastChart f={shown} object={object} theme={theme} invalid={invalid} />
         ) : lookingUp ? (
           <Skeleton height={360} />
         ) : !error ? (
-          <Empty icon={<Wind size={28} aria-hidden />} title={`Прогноза на выпуск ${dateRu(issueDate)} пока нет`}>
+          <Empty icon={<Wind size={28} aria-hidden />} title={t('forecast.chart.emptyTitle', { date: dateRu(issueDate) })}>
             <p className="fc-empty-text">
-              Агент возьмёт архивный прогноз погоды, выпущенный не позже {ddmm(issueDate)} 23:59, и посчитает почасовую выработку
-              на {ddmm(d1)} и {ddmm(d2)}.
+              {t('forecast.chart.emptyText', { date: ddmm(issueDate), d1: ddmm(d1), d2: ddmm(d2) })}
             </p>
             <button type="button" className="btn btn-primary" onClick={run} disabled={running != null}>
-              <Play size={16} /> Сделать прогноз
+              <Play size={16} /> {t('forecast.controls.run')}
             </button>
           </Empty>
         ) : null}

@@ -3,6 +3,7 @@
 
 import type { Card } from '../../api/types'
 import { hourOf, num, pct } from '../../lib/format'
+import { tr } from '../../i18n'
 import { dayLabel, prettyDates } from './model'
 
 /** Порог «высокой неуверенности» — тот же, что во флаге бэкенда (pipeline.WIDE_MEAN: средняя ширина интервала > 0.60). */
@@ -23,14 +24,14 @@ export function plainCard(c: Card): { title: string; text: string; action: strin
   switch (c.kind) {
     case 'revision':
       return {
-        title: 'Прогноз заметно изменился со вчерашнего',
-        text: `${num(c.value, 0)} ч из 24 сдвинулись на 10 п.п. и больше — погода обновилась.`,
+        title: tr('forecast.plain.revisionTitle'),
+        text: tr('forecast.plain.revisionText', { count: num(c.value, 0) }),
         action,
       }
     case 'wide_interval':
       return {
-        title: 'Неуверенные часы',
-        text: `${num(c.value, 0)} ч с широким разбросом возможной выработки (больше 30 п.п.).`,
+        title: tr('forecast.plain.wideTitle'),
+        text: tr('forecast.plain.wideText', { count: num(c.value, 0) }),
         action,
       }
     default:
@@ -41,12 +42,12 @@ export function plainCard(c: Card): { title: string; text: string; action: strin
 /** Флаг анализа бэкенда → понятная фраза. Неизвестный формат — как есть (с датами в привычном виде). */
 export function plainFlag(flag: string): string {
   let m = flag.match(/ширина интервала p10–p90 = ([\d.]+)/)
-  if (m) return `Высокая неуверенность: вероятный диапазон в среднем шириной ${pct(Number(m[1]))} мощности — прогноз менее точный.`
+  if (m) return tr('forecast.plain.flagWide', { value: pct(Number(m[1])) })
   m = flag.match(/расходится с кривой мощности \(в среднем ([\d.]+)\)/)
   if (m)
-    return `Модель расходится с простым пересчётом ветра в мощность в среднем на ${pct(Number(m[1]))} — стоит проверить входные данные.`
+    return tr('forecast.plain.flagCurve', { value: pct(Number(m[1])) })
   m = flag.match(/Модели погоды расходятся \(разброс ветра 100 м в среднем ([\d.]+) м\/с\)/)
-  if (m) return `Погодные модели не согласны между собой (в среднем на ${num(Number(m[1]))} м/с) — прогноз менее надёжен.`
+  if (m) return tr('forecast.plain.flagSpread', { value: num(Number(m[1])) })
   return prettyDates(flag)
 }
 
@@ -54,6 +55,6 @@ export function plainFlag(flag: string): string {
 export function confidence(width: number | null | undefined): { tone: 'ok' | 'warn'; label: string } | null {
   if (width == null) return null
   return width > WIDE
-    ? { tone: 'warn', label: 'уверенность низкая — широкий вероятный диапазон' }
-    : { tone: 'ok', label: 'уверенность нормальная' }
+    ? { tone: 'warn', label: tr('forecast.verdict.confLow') }
+    : { tone: 'ok', label: tr('forecast.verdict.confOk') }
 }
