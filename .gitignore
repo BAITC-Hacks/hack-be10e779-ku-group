@@ -1,0 +1,44 @@
+# секреты
+.env
+.env.*
+!.env.example
+
+# личные настройки AI-ассистентов
+CLAUDE.local.md
+.claude/settings.local.json
+
+# материалы подготовки — остаются у участников локально, в репозиторий не импортируются
+# (раскрыты в README; состав первого коммита — docs/playbook.md, «Импорт заготовок»)
+docs/research/
+docs/archive/
+docs/dry-run.md
+docs/prep-checklist.md
+data/norms-raw/
+
+# настройки только для нашего сервера (docs/deploy.md)
+docker-compose.override.yml
+
+# python
+__pycache__/
+*.pyc
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+
+# node
+node_modules/
+frontend/dist/
+
+# данные времени выполнения
+*.db
+*.sqlite3
+uploads/
+
+# ОС и редакторы
+.DS_Store
+.idea/
+.vscode/
+
+# локальные ИИ-блоки: переносятся в проект только по нужде кейса (kit/README.md)
+kit/
