@@ -146,6 +146,11 @@ export default function App() {
           {TABS.map((tb) => (
             <button key={tb.id} className="tab" aria-current={tab === tb.id ? 'page' : undefined} onClick={() => setTab(tb.id)}>
               {t(tb.label)}
+              {tb.id === 'stations' && (
+                <span className="tab-badge" title={t('app.tabs.demoTitle')}>
+                  {t('app.tabs.demoBadge')}
+                </span>
+              )}
             </button>
           ))}
         </nav>

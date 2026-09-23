@@ -91,7 +91,7 @@ const en: Dict<typeof ru> = {
     lead: 'Development roadmap — not part of the current version.',
     map: {
       title: 'Owner’s fleet map',
-      text: 'All of a company’s wind farms and turbines on one map, each turbine with its own history, model and forecast.',
+      text: 'All of a company’s wind farms and turbines on one map, each turbine with its own history, model and forecast. The first step is already here: the “Stations” tab (demo) — add a station, its turbines and history, and get a simplified forecast.',
     },
     compare: {
       title: 'Analysis by turbine, group and area',

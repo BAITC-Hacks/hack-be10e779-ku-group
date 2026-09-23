@@ -4,6 +4,8 @@ import type { Dict } from '../../core'
 const kk: Dict<typeof ru> = {
   brand: { name: 'Анемо', title: 'Анемо — ЖЭС өндіретін энергияның агенттік болжамы', tagline: 'станция уақыты UTC+5', station: 'ЖЭС, 2 турбина (Алматы облысы)' },
   tabs: {
+    demoBadge: 'демо',
+    demoTitle: 'Ауқымдау демосы: жаңа станцияларға арналған жеңілдетілген модель, агенттік циклсіз',
     aria: 'Бөлімдер',
     forecast: 'Болжам',
     february: 'Кезеңге болжам',

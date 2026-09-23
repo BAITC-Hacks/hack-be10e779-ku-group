@@ -4,6 +4,8 @@ import type { Dict } from '../../core'
 const en: Dict<typeof ru> = {
   brand: { name: 'Anemo', title: 'Anemo — agentic wind farm output forecast', tagline: 'station time UTC+5', station: 'Wind farm, 2 turbines (Almaty region)' },
   tabs: {
+    demoBadge: 'demo',
+    demoTitle: 'Scaling demo: a simplified model for new stations, without the agent loop',
     aria: 'Sections',
     forecast: 'Forecast',
     february: 'Period forecast',

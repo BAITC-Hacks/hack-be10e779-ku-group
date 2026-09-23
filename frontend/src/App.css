@@ -49,3 +49,9 @@
 .tab { white-space: nowrap; flex: none; }
 .tabs { scrollbar-width: none; }
 .tabs::-webkit-scrollbar { display: none; }
+
+.tab-badge {
+  margin-left: 6px; padding: 1px 6px; border-radius: 999px; border: 1px solid var(--demo);
+  color: var(--demo); font-size: 10px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase;
+  vertical-align: 1px;
+}
