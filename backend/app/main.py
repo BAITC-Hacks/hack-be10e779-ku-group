@@ -8,6 +8,7 @@ from fastapi.responses import FileResponse, JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.ai.llm import LLMBadOutput, LLMClient, LLMUnavailable
+from app.api import forecast as forecast_api
 from app.config import settings
 from app.db import init_db
 from app.schemas import Health
@@ -48,6 +49,7 @@ def health() -> Health:
 
 
 # роутеры подключаются здесь: app.include_router(<router>, prefix="/api")
+app.include_router(forecast_api.router, prefix="/api")
 
 
 @app.exception_handler(StarletteHTTPException)
