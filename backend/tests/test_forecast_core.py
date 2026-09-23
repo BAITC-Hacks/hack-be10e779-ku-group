@@ -74,3 +74,24 @@ def test_forecast_for_february_9_has_48_bounded_ordered_hours():
 def test_issue_date_outside_test_window_is_rejected(issue_date):
     with pytest.raises(ValueError):
         pipeline.check_issue_date(issue_date)
+
+
+def test_validate_fixes_order_and_falls_back_to_curve():
+    from app.forecast import agent
+
+    hours = pipeline.full_cycle("2026-02-09")["hours"]
+    hours[0]["p10"], hours[0]["p50"], hours[0]["p90"] = 0.9, 0.5, 0.1  # перепутан порядок
+    hours[1]["p50"] = float("nan")  # нет прогноза модели
+    res = agent.validate(hours, "2026-02-09")
+    assert res["n_fixed"] == 2 and res["n_problems"] == 0 and res["ok"]
+    assert hours[0]["p10"] <= hours[0]["p50"] <= hours[0]["p90"]
+    assert hours[1]["p50"] == hours[1]["curve"]
+
+
+def test_validate_rejects_wrong_weather_run():
+    from app.forecast import agent
+
+    hours = pipeline.full_cycle("2026-02-09")["hours"]
+    hours[-1]["weather_run_days"] = 1  # для последнего часа D+2 выпуск за сутки опубликован после момента прогноза
+    res = agent.validate(hours, "2026-02-09")
+    assert not res["ok"] and res["n_problems"] == 1

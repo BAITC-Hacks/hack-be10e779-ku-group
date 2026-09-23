@@ -11,7 +11,7 @@ import sys
 import pandas as pd
 
 from app.config import ROOT_DIR
-from app.forecast import model, pipeline, weather
+from app.forecast import model, weather
 
 OUT = ROOT_DIR / "outputs"
 

@@ -14,6 +14,7 @@ from app.forecast import data, model, weather
 FIRST_ISSUE = pd.Timestamp("2026-01-31")
 LAST_ISSUE = pd.Timestamp("2026-02-27")
 LOW = 0.05  # «почти нет выработки»
+WIDE_MEAN = 0.60  # средняя ширина p10–p90 выпуска — верхняя четверть по февралю (медиана 0.52 после калибровки)
 
 
 def issue_window(issue_date: str) -> tuple[pd.Timestamp, pd.DatetimeIndex, pd.DatetimeIndex]:
@@ -103,7 +104,7 @@ def analyze(hours: list[dict], weather_info: dict) -> Analysis:
     if weather_info["missing_hours"]:
         flags.append(f"В прогнозе погоды нет {weather_info['missing_hours']} ч — значения восстановлены по соседним часам")
     width = float((df["p90"] - df["p10"]).mean())
-    if width > 0.45:
+    if width > WIDE_MEAN:
         flags.append(f"Высокая неопределённость: средняя ширина интервала p10–p90 = {width:.2f}")
     if weather_info["wind_100m_max"] and weather_info["wind_100m_max"] > 20:
         flags.append(f"Сильный ветер до {weather_info['wind_100m_max']} м/с — риск остановки турбин по защите")

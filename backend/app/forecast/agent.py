@@ -107,6 +107,47 @@ def run_forecast(a: IssueArgs) -> dict:
             "calibration": cal["method"], "interval_coverage_check": cal["coverage_after"]}
 
 
+def validate(hours: list[dict], issue_date: str) -> dict:
+    """Проверки результата перед выдачей: ровно 48 часов подряд с D+1 00:00, значения в [0, 1] без пропусков,
+    p10 ≤ p50 ≤ p90, погода по каждому часу из допустимого выпуска. Нарушение исправляется откатом, а не скрывается:
+    нет p50 → берётся кривая мощности по прогнозному ветру; порядок квантилей восстанавливается."""
+    _, d1, d2 = pipeline.issue_window(issue_date)
+    expected = [t.strftime("%Y-%m-%dT%H:%M") for t in d1.append(d2)]
+    problems, fixed = [], []
+    if [h["time"] for h in hours] != expected:
+        problems.append("часы прогноза не совпадают с окном D+1 00:00 … D+2 23:00")
+    allowed = pipeline.window_leads(issue_date).to_dict()
+    for h in hours:
+        t = h["time"]
+        if h.get("weather_run_days") != allowed.get(pd.Timestamp(t)):
+            problems.append(f"{t}: выпуск погоды не по правилу публикации")
+        vals = [h.get(k) for k in ("p10", "p50", "p90")]
+        if any(v is None or v != v for v in vals):  # None или NaN
+            if h.get("curve") is not None and h["curve"] == h["curve"]:
+                h["p50"] = h["p10"] = h["p90"] = h["curve"]
+                fixed.append(f"{t}: нет прогноза модели — откат на кривую мощности")
+            else:
+                problems.append(f"{t}: нет ни прогноза модели, ни кривой мощности")
+            continue
+        clipped = [min(1.0, max(0.0, v)) for v in vals]
+        ordered = sorted(clipped)
+        if ordered != vals:
+            h["p10"], h["p50"], h["p90"] = ordered
+            fixed.append(f"{t}: значения приведены к [0,1] и порядку p10 ≤ p50 ≤ p90")
+    return {"ok": not problems, "checked_hours": len(hours), "problems": problems[:10], "fixed": fixed[:10],
+            "n_problems": len(problems), "n_fixed": len(fixed)}
+
+
+@tool("Проверить прогноз перед выдачей: 48 часов подряд, диапазон [0,1], порядок квантилей, правило выпуска погоды;"
+      " нарушения исправить откатом на кривую мощности", IssueArgs)
+def validate_forecast(a: IssueArgs) -> dict:
+    st = _st(a.issue_date)
+    if "hours" not in st:
+        return {"error": "Сначала run_forecast"}
+    st["validation"] = validate(st["hours"], a.issue_date)
+    return st["validation"]
+
+
 @tool("Проанализировать прогноз: проверки правдоподобия, неопределённость, пики и провалы", IssueArgs)
 def analyze_forecast(a: IssueArgs) -> dict:
     st = _st(a.issue_date)
@@ -136,14 +177,16 @@ def compare_with_previous(a: IssueArgs) -> dict:
     return st["update"]
 
 
-TOOLS = [rank_weather_sources, fetch_weather, build_features, run_forecast, analyze_forecast, compare_with_previous]
+TOOLS = [rank_weather_sources, fetch_weather, build_features, run_forecast, validate_forecast, analyze_forecast,
+         compare_with_previous]
 
 SYSTEM = """Ты — агент прогноза выработки ветроэлектростанции (2 турбины, Алматинская обл.) для диспетчера.
 Выполни полный цикл через инструменты, для даты выпуска из запроса:
 1) rank_weather_sources — оцени источники погоды; 2) fetch_weather — получи архивный прогноз; если у источника есть пропуски
 в окне прогноза (missing_hours_in_window > 4) — передай его в exclude_sources. Высокая ошибка ветра сама по себе
 не повод исключать: проверено, что модель уже учитывает качество источников, и исключение по ошибке не улучшает прогноз;
-3) build_features; 4) run_forecast; 5) analyze_forecast; 6) compare_with_previous.
+3) build_features; 4) run_forecast; 5) validate_forecast — если ok=false, сообщи проблему диспетчеру;
+6) analyze_forecast; 7) compare_with_previous.
 Если после анализа видно, что причина проблемы — источник погоды, исключи его и повтори шаги 2–5 (не больше одного раза).
 Правила: все числа бери только из ответов инструментов, ничего не придумывай. Погода — только архивная, фактическую не проси.
 В конце — краткое объяснение для диспетчера по-русски (5–7 предложений): ожидаемая выработка D+1 и D+2 в «часах работы на
@@ -171,6 +214,7 @@ def _deterministic(issue_date: str) -> tuple[list[dict], str]:
     call(fetch_weather, {"issue_date": issue_date, "exclude_sources": exclude})
     call(build_features, {"issue_date": issue_date})
     run = call(run_forecast, {"issue_date": issue_date})
+    val = call(validate_forecast, {"issue_date": issue_date})
     an = call(analyze_forecast, {"issue_date": issue_date})
     upd = call(compare_with_previous, {"issue_date": issue_date})
     text = (f"Прогноз на {pd.Timestamp(issue_date).date() + pd.Timedelta(days=1)} и следующие сутки. "
@@ -180,7 +224,9 @@ def _deterministic(issue_date: str) -> tuple[list[dict], str]:
     text += (f"По сравнению с прошлым выпуском прогноз на {upd['day']} изменился в среднем на "
              f"{upd['mean_abs_change'] * 100:.1f} п.п. номинала ({'существенно' if upd['significant'] else 'незначительно'}). ")
     text += ("Исключены источники погоды: " + ", ".join(exclude) + ". ") if exclude else "Все источники погоды использованы. "
-    text += ("Внимание: " + "; ".join(an["flags"]) + ".") if an["flags"] else "Замечаний нет."
+    text += ("Внимание: " + "; ".join(an["flags"]) + ". ") if an["flags"] else "Замечаний нет. "
+    text += ("Проверка результата пройдена." if val["ok"] and not val["n_fixed"]
+             else f"Проверка результата: исправлено {val['n_fixed']}, проблем {val['n_problems']}.")
     return steps, text
 
 
@@ -211,6 +257,10 @@ def run(issue_date: str, planner_only: bool = False) -> dict:
         if mode == "live":
             explanation = explanation or explanation2
     st = _state[issue_date]
+    if "validation" not in st:  # LLM могла не вызвать проверку — она обязательна перед выдачей
+        st["validation"] = validate(st["hours"], issue_date)
+        steps.append({"type": "tool", "name": "validate_forecast", "arguments": "{}", "ok": st["validation"]["ok"],
+                      "output": json.dumps(st["validation"], ensure_ascii=False)[:1500], "ms": 0})
     forecast = {
         "issue_date": issue_date,
         "issued_at": f"{issue_date}T23:59",
@@ -222,6 +272,7 @@ def run(issue_date: str, planner_only: bool = False) -> dict:
         "summary": st["analysis"]["summary"],
         "analysis": {"flags": st["analysis"]["flags"], "changed_vs_previous": st["update"]["mean_abs_change"],
                      "update": st["update"]},
+        "validation": st["validation"],
         "cards": passport.cards(st["hours"], st["update"], st["weather"], st["exclude"]),
         "explanation": explanation,
         "mode": mode,
