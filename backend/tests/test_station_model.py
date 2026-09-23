@@ -44,6 +44,11 @@ def test_months_append_and_curve_refits(client):
     p50 = [p["p50"] for p in curve["points"]]
     assert p50 == sorted(p50) and 0 <= p50[0] and p50[-1] <= 1  # кривая не убывает и в пределах 0–1
 
+    rep = r2.json()["files"][0]
+    assert rep["step_min"] == 10 and rep["hours"] > 700 and rep["power_out_of_range"] == 0
+    cov = client.get(f"/api/turbines/{tid}/history/coverage").json()["coverage"]
+    assert [c["month"] for c in cov] == ["2025-12", "2026-01"] and all(c["expected"] == 744 for c in cov)
+
     # повторная загрузка того же месяца не удваивает историю
     r3 = client.post(f"/api/turbines/{tid}/history/months", files=[("files", ("jan.csv", _month_csv("2026-01")))])
     assert r3.json()["total_rows"] == r2.json()["total_rows"]

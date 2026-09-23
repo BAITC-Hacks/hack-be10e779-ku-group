@@ -19,19 +19,55 @@
 }
 .st-input:focus-visible { outline: 2px solid var(--primary); outline-offset: 1px; }
 
-/* ---------- карточка станции ---------- */
-.st-card-title { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 8px; }
-.st-meta { margin: 0 0 12px; font-size: 13px; font-variant-numeric: tabular-nums; }
-.st-empty { margin: 0; font-size: 13px; }
-.st-turbines { display: grid; gap: 10px; }
-.st-turbine {
-  display: grid; gap: 8px; padding: 10px 12px; border-radius: var(--radius-sm);
-  background: var(--surface-2); border: 1px solid var(--border);
+/* ---------- раскладка: список станций + выбранная ---------- */
+.st, .st > * { min-width: 0; }
+.st-layout { display: grid; gap: 16px; align-items: start; min-width: 0; }
+@media (min-width: 1024px) { .st-layout { grid-template-columns: 300px minmax(0, 1fr); } }
+.st-side { display: grid; gap: 10px; min-width: 0; }
+.st-new-btn { justify-self: start; }
+.st-new-btn-on { border-color: var(--primary); color: var(--primary); }
+.st-form-box {
+  padding: 12px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: var(--surface-2);
 }
-.st-turbine-info { display: flex; flex-wrap: wrap; gap: 4px 16px; font-size: 13px; font-variant-numeric: tabular-nums; }
-.st-upload { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 13px; }
-.st-upload input[type='file'] { max-width: 100%; color: var(--text-2); }
-.st-files { margin: 4px 0; padding-left: 18px; font-size: 13px; }
+.st-form-box .notice { flex-basis: 100%; }
+.st-list { display: grid; gap: 8px; min-width: 0; }
+.st-item {
+  display: grid; gap: 4px; width: 100%; min-width: 0; padding: 10px 12px; text-align: left; cursor: pointer;
+  font: inherit; color: var(--text); background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); transition: border-color .15s, background .15s;
+}
+.st-item:hover { border-color: var(--border-strong); }
+.st-item:focus-visible { outline: 2px solid var(--primary); outline-offset: 1px; }
+.st-item-on { border-color: var(--primary); background: var(--primary-band); }
+.st-item-top { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px; min-width: 0; }
+.st-item-name { overflow-wrap: anywhere; font-size: 14px; }
+.st-item-meta { font-size: 12px; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+
+/* ---------- выбранная станция ---------- */
+.st-detail { min-width: 0; }
+.st-meta { margin: 0 0 12px; font-size: 13px; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.st-empty { margin: 0; font-size: 13px; }
+.st-detail > .notice + .st-tlist { margin-top: 12px; }
+.st-steps { display: grid; gap: 20px; }
+.st-step { display: grid; gap: 10px; min-width: 0; }
+.st-step + .st-step { padding-top: 16px; border-top: 1px solid var(--border); }
+.st-step-head { display: flex; align-items: center; gap: 10px; margin: 0; font-size: 15px; font-weight: 600; }
+.st-step-num {
+  display: inline-grid; place-items: center; flex: none; width: 26px; height: 26px; border-radius: 50%;
+  background: var(--primary); color: var(--primary-ink); font-size: 13px; font-weight: 700;
+}
+.st-step-body { display: grid; gap: 10px; min-width: 0; }
+@media (min-width: 640px) { .st-step-body { padding-left: 36px; } }
+.st-tlist { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.st-trow {
+  display: flex; flex-wrap: wrap; gap: 2px 14px; padding: 8px 10px; font-size: 13px; font-variant-numeric: tabular-nums;
+  border-radius: var(--radius-sm); background: var(--surface-2); border: 1px solid var(--border);
+}
+.st-add-btn { justify-self: start; }
+.st-tb-pick { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 13px; color: var(--text-2); }
+.st-select { height: 32px; max-width: 100%; }
+.st-fmt { font-size: 12px; }
+.st-fmt summary { cursor: pointer; width: max-content; max-width: 100%; }
 
 /* ---------- графики и прогноз ---------- */
 .st-chart { margin-top: 16px; }
@@ -41,3 +77,43 @@
 .st-forecast .notice { width: 100%; }
 .st-summary { margin: 0; font-size: 14px; }
 .st-note { margin: 0; font-size: 12px; }
+
+/* ---------- загрузка истории турбины (UploadBox) ---------- */
+.st-ub { display: grid; gap: 10px; font-size: 13px; }
+.st-drop {
+  display: grid; justify-items: center; gap: 4px; padding: 14px 12px; text-align: center; cursor: pointer;
+  border: 1.5px dashed var(--border-strong); border-radius: var(--radius-sm); background: var(--surface);
+  color: var(--text-2); transition: border-color .15s, background .15s;
+}
+.st-drop:hover, .st-drop:focus-visible, .st-drop-on { border-color: var(--primary); background: var(--primary-band); outline: none; }
+.st-drop-link { color: var(--primary); text-decoration: underline; }
+.st-drop-hint { margin: 0; font-size: 12px; max-width: 640px; }
+.st-picked { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.st-picked li { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.st-picked-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.st-picked-x {
+  display: inline-flex; padding: 2px; border: 0; border-radius: 4px; background: none; color: var(--text-3); cursor: pointer;
+}
+.st-picked-x:hover { color: var(--error); background: var(--error-bg); }
+.st-ub-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.st-check { display: grid; gap: 6px; }
+.st-table-wrap { overflow-x: auto; }
+.st-table { border-collapse: collapse; width: 100%; font-size: 12px; font-variant-numeric: tabular-nums; }
+.st-table th, .st-table td { padding: 4px 8px; border-bottom: 1px solid var(--border); text-align: left; white-space: nowrap; }
+.st-table th { color: var(--text-3); font-weight: 500; }
+.st-table td.st-bad { background: var(--warn-bg); color: var(--warn); font-weight: 600; }
+
+.st-cov { display: grid; gap: 6px; }
+.st-cov-empty { margin: 0; }
+.st-cov-grid { display: grid; gap: 3px; overflow-x: auto; }
+.st-cov-row { display: grid; grid-template-columns: 40px repeat(12, 22px); gap: 3px; align-items: center; }
+.st-cov-year { font-size: 12px; color: var(--text-2); }
+.st-cov-mon { font-size: 10px; text-align: center; }
+.st-cov-cell { display: inline-block; width: 22px; height: 16px; border-radius: 3px; box-sizing: border-box; }
+.st-cov-none { border: 1px solid var(--border-strong); background: transparent; }
+.st-cov-low { background: var(--warn); opacity: .75; }
+.st-cov-part { background: var(--primary-band); border: 1px solid var(--primary); }
+.st-cov-full { background: var(--primary); }
+.st-cov-legend { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 12px; }
+.st-cov-legend span { display: inline-flex; align-items: center; gap: 6px; }
+.st-cov-legend .st-cov-cell { width: 14px; height: 12px; }

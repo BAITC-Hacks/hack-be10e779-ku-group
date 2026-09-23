@@ -1,14 +1,15 @@
 // Вкладка «Станции»: станции и турбины, загрузка истории по месяцам (CSV), кривая мощности станции и прогноз на 48 ч.
 // Для станции из ТЗ — только просмотр (полная модель во вкладке «Прогноз»); для новых — упрощённая модель на бэкенде.
 
-import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react'
-import { Plus, Upload, Wind } from 'lucide-react'
+import { useCallback, useEffect, useMemo, useState, type FormEvent, type ReactNode } from 'react'
+import { Plus, Wind } from 'lucide-react'
 import { api } from '../../api/client'
 import type { Theme } from '../../app/shared'
 import { EChart, type ChartOption } from '../../components/EChart'
 import { Badge, Card, Empty, Notice, Spinner } from '../../components/ui'
 import { dateRu, dateTime, esc, hoursFull, int, num, pct } from '../../lib/format'
 import { cssVar } from '../../lib/theme'
+import UploadBox from './UploadBox'
 import './stations.css'
 
 type Turbine = {
@@ -38,13 +39,6 @@ type Curve = {
   period: [string, string]
   points: { wind: number; p10: number; p50: number; p90: number; n: number }[]
 }
-type UploadResult = {
-  turbine_id: number
-  files: { name: string; rows: number; period: [string, string] }[]
-  total_rows: number
-  period: [string, string]
-  station_status: string
-}
 type StationForecast = {
   station_id: number
   issued_at: string
@@ -70,9 +64,23 @@ function readColors(_theme: Theme) {
   }
 }
 
+const isReady = (s: Station) => s.model_status.toLowerCase().startsWith('модель пересчитана')
+const minStr = (xs: (string | null)[]) => xs.filter((x): x is string => !!x).sort()[0] ?? null
+const maxStr = (xs: (string | null)[]) => xs.filter((x): x is string => !!x).sort().at(-1) ?? null
+const stationPeriod = (s: Station) =>
+  period(minStr(s.turbines.map((t) => t.history_start)), maxStr(s.turbines.map((t) => t.history_end)))
+
+function StatusBadge({ station, ready }: { station: Station; ready: boolean }) {
+  if (station.is_case) return <Badge tone="info">из ТЗ</Badge>
+  return ready ? <Badge tone="ok">модель готова</Badge> : <Badge tone="warn">нужна история</Badge>
+}
+
 export default function StationsTab({ theme }: { theme: Theme }) {
   const [stations, setStations] = useState<Station[] | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [selId, setSelId] = useState<number | null>(null)
+  const [showNew, setShowNew] = useState(false)
+  const [withCurve, setWithCurve] = useState<Set<number>>(() => new Set())
 
   const load = useCallback(() => {
     api<Station[]>('/api/stations')
@@ -87,21 +95,33 @@ export default function StationsTab({ theme }: { theme: Theme }) {
     load()
   }, [load])
 
+  const onCurve = useCallback((id: number, has: boolean) => {
+    setWithCurve((prev) => {
+      if (prev.has(id) === has) return prev
+      const next = new Set(prev)
+      if (has) next.add(id)
+      else next.delete(id)
+      return next
+    })
+  }, [])
+
+  const selected =
+    stations?.find((s) => s.id === selId) ?? stations?.find((s) => !s.is_case) ?? stations?.[0] ?? null
+  const ready = (s: Station) => isReady(s) || withCurve.has(s.id)
+
   return (
     <div className="st">
       <header className="st-head">
         <h1 className="st-title">Станции и турбины</h1>
         <p className="st-intro muted">
-          Добавьте станцию и турбины, загрузите историю по месяцам — модель станции пересчитается сама, и можно сделать
-          прогноз на 48 часов.
+          Три шага: добавьте турбины → загрузите историю по месяцам → модель пересчитается сама, и можно сделать прогноз
+          на 48 ч.
         </p>
       </header>
       <Notice tone="info">
-        Для станции из ТЗ используется полная модель (вкладка «Прогноз»). Для новых станций — упрощённая модель: кривая
-        мощности по загруженной истории + прогноз погоды Open-Meteo по координатам.
+        Станция из ТЗ — полная модель (вкладка «Прогноз»). Новые станции — упрощённая: кривая мощности по истории +
+        погода Open-Meteo.
       </Notice>
-
-      <NewStationForm onCreated={load} />
 
       {error && (
         <Notice
@@ -116,21 +136,75 @@ export default function StationsTab({ theme }: { theme: Theme }) {
         </Notice>
       )}
       {!stations && !error && <Spinner label="Загружаем станции…" />}
-      {stations && stations.length === 0 && <Empty icon={<Wind size={24} />} title="Станций пока нет" />}
-      {stations?.map((s) => <StationCard key={s.id} station={s} theme={theme} onChanged={load} />)}
+
+      {stations && (
+        <div className="st-layout">
+          <aside className="st-side">
+            <button
+              type="button"
+              className={`btn btn-sm st-new-btn${showNew ? ' st-new-btn-on' : ''}`}
+              onClick={() => setShowNew((v) => !v)}
+              aria-expanded={showNew}
+            >
+              <Plus size={14} /> Новая станция
+            </button>
+            {showNew && (
+              <NewStationForm
+                onCreated={(s) => {
+                  setSelId(s.id)
+                  setShowNew(false)
+                  load()
+                }}
+              />
+            )}
+            {stations.length === 0 && <Empty icon={<Wind size={24} />} title="Станций пока нет" />}
+            <div className="st-list" role="list">
+              {stations.map((s) => (
+                <button
+                  key={s.id}
+                  type="button"
+                  role="listitem"
+                  className={`st-item${selected?.id === s.id ? ' st-item-on' : ''}`}
+                  aria-current={selected?.id === s.id ? 'true' : undefined}
+                  onClick={() => setSelId(s.id)}
+                >
+                  <span className="st-item-top">
+                    <b className="st-item-name">{s.name}</b>
+                    <StatusBadge station={s} ready={ready(s)} />
+                  </span>
+                  <span className="st-item-meta muted">
+                    турбин: {s.turbines.length} · история: {stationPeriod(s)}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </aside>
+
+          {selected && (
+            <StationDetail
+              key={selected.id}
+              station={selected}
+              ready={ready(selected)}
+              theme={theme}
+              onChanged={load}
+              onCurve={onCurve}
+            />
+          )}
+        </div>
+      )}
     </div>
   )
 }
 
 /* ---------- форма «Новая станция» ---------- */
 
-function NewStationForm({ onCreated }: { onCreated: () => void }) {
+function NewStationForm({ onCreated }: { onCreated: (s: Station) => void }) {
   const [name, setName] = useState('')
   const [lat, setLat] = useState('')
   const [lon, setLon] = useState('')
   const [region, setRegion] = useState('')
   const [busy, setBusy] = useState(false)
-  const [msg, setMsg] = useState<{ tone: 'ok' | 'error'; text: string } | null>(null)
+  const [msg, setMsg] = useState<string | null>(null)
 
   const submit = (e: FormEvent) => {
     e.preventDefault()
@@ -140,181 +214,191 @@ function NewStationForm({ onCreated }: { onCreated: () => void }) {
       method: 'POST',
       body: JSON.stringify({ name: name.trim(), latitude: toNum(lat), longitude: toNum(lon), region: region.trim() }),
     })
-      .then((s) => {
-        setMsg({ tone: 'ok', text: `Станция «${s.name}» добавлена.` })
-        setName('')
-        setLat('')
-        setLon('')
-        setRegion('')
-        onCreated()
-      })
-      .catch((err) => setMsg({ tone: 'error', text: errText(err) }))
+      .then((s) => onCreated(s))
+      .catch((err) => setMsg(errText(err)))
       .finally(() => setBusy(false))
   }
 
   return (
-    <Card title="Новая станция">
-      <form className="st-form" onSubmit={submit}>
-        <label className="st-field st-field-wide">
-          <span>Название</span>
-          <input className="st-input" value={name} onChange={(e) => setName(e.target.value)} required />
-        </label>
-        <label className="st-field">
-          <span>Широта</span>
-          <input className="st-input" inputMode="decimal" value={lat} onChange={(e) => setLat(e.target.value)} required placeholder="43.25" />
-        </label>
-        <label className="st-field">
-          <span>Долгота</span>
-          <input className="st-input" inputMode="decimal" value={lon} onChange={(e) => setLon(e.target.value)} required placeholder="76.95" />
-        </label>
-        <label className="st-field st-field-wide">
-          <span>Регион</span>
-          <input className="st-input" value={region} onChange={(e) => setRegion(e.target.value)} />
-        </label>
-        <button className="btn btn-primary" type="submit" disabled={busy || !name.trim() || !validCoord(lat) || !validCoord(lon)}>
-          <Plus size={16} /> Добавить станцию
-        </button>
-      </form>
-      {msg && <Notice tone={msg.tone}>{msg.text}</Notice>}
-    </Card>
+    <form className="st-form st-form-box" onSubmit={submit}>
+      <label className="st-field st-field-wide">
+        <span>Название</span>
+        <input className="st-input" value={name} onChange={(e) => setName(e.target.value)} required />
+      </label>
+      <label className="st-field">
+        <span>Широта</span>
+        <input className="st-input" inputMode="decimal" value={lat} onChange={(e) => setLat(e.target.value)} required placeholder="43.25" />
+      </label>
+      <label className="st-field">
+        <span>Долгота</span>
+        <input className="st-input" inputMode="decimal" value={lon} onChange={(e) => setLon(e.target.value)} required placeholder="76.95" />
+      </label>
+      <label className="st-field st-field-wide">
+        <span>Регион</span>
+        <input className="st-input" value={region} onChange={(e) => setRegion(e.target.value)} />
+      </label>
+      <button className="btn btn-primary btn-sm" type="submit" disabled={busy || !name.trim() || !validCoord(lat) || !validCoord(lon)}>
+        <Plus size={14} /> Добавить станцию
+      </button>
+      {msg && <Notice tone="error">{msg}</Notice>}
+    </form>
   )
 }
 
 const toNum = (s: string) => Number(s.trim().replace(',', '.'))
 const validCoord = (s: string) => s.trim() !== '' && Number.isFinite(toNum(s))
 
-/* ---------- карточка станции ---------- */
+/* ---------- выбранная станция ---------- */
 
-function StationCard({ station, theme, onChanged }: { station: Station; theme: Theme; onChanged: () => void }) {
+function Step({ n, title, children }: { n: number; title: string; children: ReactNode }) {
+  return (
+    <section className="st-step">
+      <h3 className="st-step-head">
+        <span className="st-step-num" aria-hidden="true">
+          {n}
+        </span>
+        {title}
+      </h3>
+      <div className="st-step-body">{children}</div>
+    </section>
+  )
+}
+
+function TurbineList({ turbines }: { turbines: Turbine[] }) {
+  if (turbines.length === 0) return <p className="muted st-empty">Турбин пока нет — добавьте первую.</p>
+  return (
+    <ul className="st-tlist">
+      {turbines.map((tb) => (
+        <li key={tb.id} className="st-trow">
+          <b>{tb.name}</b>
+          <span className="muted">{coords(tb.latitude, tb.longitude)}</span>
+          <span>
+            строк: <b className="mono">{int(tb.history_rows)}</b>
+          </span>
+          <span className="muted">{period(tb.history_start, tb.history_end)}</span>
+        </li>
+      ))}
+    </ul>
+  )
+}
+
+function StationDetail({
+  station,
+  ready,
+  theme,
+  onChanged,
+  onCurve,
+}: {
+  station: Station
+  ready: boolean
+  theme: Theme
+  onChanged: () => void
+  onCurve: (id: number, has: boolean) => void
+}) {
   const [curve, setCurve] = useState<Curve | null>(null)
   const [curveVer, setCurveVer] = useState(0)
+  const [showTb, setShowTb] = useState(false)
+  const [tbSel, setTbSel] = useState<number | null>(null)
 
   useEffect(() => {
+    if (station.is_case) return
     let alive = true
     api<Curve>(`/api/stations/${station.id}/curve`)
-      .then((c) => alive && setCurve(c))
+      .then((c) => {
+        if (!alive) return
+        setCurve(c)
+        onCurve(station.id, c.points.length > 0)
+      })
       .catch(() => alive && setCurve(null)) // 404 — истории ещё нет
     return () => {
       alive = false
     }
-  }, [station.id, curveVer])
+  }, [station.id, station.is_case, curveVer, onCurve])
 
   const afterUpload = () => {
     setCurveVer((v) => v + 1)
     onChanged()
   }
 
-  const noHistory = station.model_status.toLowerCase().startsWith('нет')
+  const tbs = station.turbines
+  const tbId = tbs.some((t) => t.id === tbSel) ? tbSel : (tbs[0]?.id ?? null)
+  const tb = tbs.find((t) => t.id === tbId) ?? null
+  const hasCurve = curve != null && curve.points.length > 0
 
   return (
     <Card
-      className="st-card"
-      title={
-        <span className="st-card-title">
-          {station.name}
-          {station.is_case && <Badge tone="info">станция из ТЗ</Badge>}
-        </span>
-      }
-      actions={
-        <Badge tone={noHistory ? 'warn' : 'ok'} title="Состояние модели станции">
-          {station.model_status || '—'}
-        </Badge>
-      }
+      className="st-detail"
+      title={station.name}
+      actions={<StatusBadge station={station} ready={ready || hasCurve} />}
     >
       <p className="st-meta muted">
         {coords(station.latitude, station.longitude)}
-        {station.region && ` · ${station.region}`} · турбин: {station.turbines.length}
+        {station.region && ` · ${station.region}`} · {station.model_status || '—'}
       </p>
 
-      {station.turbines.length > 0 ? (
-        <div className="st-turbines">
-          {station.turbines.map((tb) => (
-            <TurbineRow key={tb.id} turbine={tb} canUpload={!station.is_case} onUploaded={afterUpload} />
-          ))}
-        </div>
+      {station.is_case ? (
+        <>
+          <Notice tone="info">
+            Станция из ТЗ — полная модель, прогноз на вкладке «Прогноз». Загрузка истории для неё не нужна.
+          </Notice>
+          <TurbineList turbines={tbs} />
+        </>
       ) : (
-        <p className="muted st-empty">Турбин пока нет — добавьте первую.</p>
-      )}
+        <div className="st-steps">
+          <Step n={1} title="Турбины">
+            <TurbineList turbines={tbs} />
+            <button
+              type="button"
+              className="btn btn-sm st-add-btn"
+              onClick={() => setShowTb((v) => !v)}
+              aria-expanded={showTb}
+            >
+              <Plus size={14} /> Добавить турбину
+            </button>
+            {showTb && (
+              <NewTurbineForm
+                stationId={station.id}
+                onCreated={() => {
+                  setShowTb(false)
+                  onChanged()
+                }}
+              />
+            )}
+          </Step>
 
-      {!station.is_case && <NewTurbineForm stationId={station.id} onCreated={onChanged} />}
+          <Step n={2} title="Загрузка истории">
+            {tb ? (
+              <>
+                <label className="st-tb-pick">
+                  <span>Турбина:</span>
+                  <select className="st-input st-select" value={tb.id} onChange={(e) => setTbSel(Number(e.target.value))}>
+                    {tbs.map((t) => (
+                      <option key={t.id} value={t.id}>
+                        {t.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <UploadBox key={tb.id} turbineId={tb.id} turbineName={tb.name} canUpload onUploaded={afterUpload} />
+              </>
+            ) : (
+              <p className="muted st-empty">Сначала добавьте турбину в шаге 1.</p>
+            )}
+          </Step>
 
-      {curve && curve.points.length > 0 && <CurveChart curve={curve} theme={theme} />}
-
-      {!station.is_case && <ForecastBlock stationId={station.id} theme={theme} />}
-    </Card>
-  )
-}
-
-/* ---------- турбина + загрузка месяцев ---------- */
-
-function TurbineRow({ turbine, canUpload, onUploaded }: { turbine: Turbine; canUpload: boolean; onUploaded: () => void }) {
-  const [files, setFiles] = useState<File[]>([])
-  const [inputKey, setInputKey] = useState(0)
-  const [busy, setBusy] = useState(false)
-  const [result, setResult] = useState<UploadResult | null>(null)
-  const [error, setError] = useState<string | null>(null)
-
-  const upload = () => {
-    const fd = new FormData()
-    files.forEach((f) => fd.append('files', f))
-    setBusy(true)
-    setError(null)
-    setResult(null)
-    api<UploadResult>(`/api/turbines/${turbine.id}/history/months`, { method: 'POST', body: fd })
-      .then((r) => {
-        setResult(r)
-        setFiles([])
-        setInputKey((k) => k + 1)
-        onUploaded()
-      })
-      .catch((e) => setError(errText(e)))
-      .finally(() => setBusy(false))
-  }
-
-  return (
-    <div className="st-turbine">
-      <div className="st-turbine-info">
-        <b>{turbine.name}</b>
-        <span className="muted">{coords(turbine.latitude, turbine.longitude)}</span>
-        <span>
-          строк истории: <b className="mono">{int(turbine.history_rows)}</b>
-        </span>
-        <span className="muted">период: {period(turbine.history_start, turbine.history_end)}</span>
-      </div>
-
-      {canUpload && (
-        <div className="st-upload">
-          <input
-            key={inputKey}
-            type="file"
-            multiple
-            accept=".csv"
-            aria-label={`CSV-файлы истории для ${turbine.name}`}
-            onChange={(e) => setFiles(Array.from(e.target.files ?? []))}
-          />
-          <button className="btn btn-sm" onClick={upload} disabled={busy || files.length === 0}>
-            {busy ? <Spinner size={14} /> : <Upload size={14} />} Загрузить месяцы
-          </button>
+          <Step n={3} title="Модель и прогноз">
+            {hasCurve || ready ? (
+              <>
+                {hasCurve && curve && <CurveChart curve={curve} theme={theme} />}
+                <ForecastBlock stationId={station.id} theme={theme} />
+              </>
+            ) : (
+              <p className="muted st-empty">Появится после загрузки истории в шаге 2.</p>
+            )}
+          </Step>
         </div>
       )}
-
-      {error && <Notice tone="error">{error}</Notice>}
-      {result && (
-        <Notice tone="ok">
-          <div>
-            Загружено строк: <b>{int(result.total_rows)}</b>, период истории: {period(...result.period)}.
-          </div>
-          <ul className="st-files">
-            {result.files.map((f) => (
-              <li key={f.name}>
-                {f.name} — {int(f.rows)} строк, {period(...f.period)}
-              </li>
-            ))}
-          </ul>
-          <div>Статус станции: {result.station_status}</div>
-        </Notice>
-      )}
-    </div>
+    </Card>
   )
 }
 
@@ -346,8 +430,7 @@ function NewTurbineForm({ stationId, onCreated }: { stationId: number; onCreated
   }
 
   return (
-    <form className="st-form st-form-sub" onSubmit={submit}>
-      <div className="eyebrow st-form-label">Добавить турбину</div>
+    <form className="st-form st-form-box" onSubmit={submit}>
       <label className="st-field st-field-wide">
         <span>Имя</span>
         <input className="st-input" value={name} onChange={(e) => setName(e.target.value)} required />
@@ -360,8 +443,8 @@ function NewTurbineForm({ stationId, onCreated }: { stationId: number; onCreated
         <span>Долгота</span>
         <input className="st-input" inputMode="decimal" value={lon} onChange={(e) => setLon(e.target.value)} required />
       </label>
-      <button className="btn btn-sm" type="submit" disabled={busy || !name.trim() || !validCoord(lat) || !validCoord(lon)}>
-        <Plus size={14} /> Добавить турбину
+      <button className="btn btn-primary btn-sm" type="submit" disabled={busy || !name.trim() || !validCoord(lat) || !validCoord(lon)}>
+        <Plus size={14} /> Добавить
       </button>
       {error && <Notice tone="error">{error}</Notice>}
     </form>

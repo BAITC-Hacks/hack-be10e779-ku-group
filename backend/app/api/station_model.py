@@ -31,20 +31,51 @@ MIN_BIN_HOURS = 3  # бин с меньшим числом часов не ис�
 FORECAST_URL = "https://api.open-meteo.com/v1/forecast"
 
 
-def _read_month(raw: bytes) -> pd.DataFrame:
+def _read_month(raw: bytes, name: str = "") -> tuple[pd.DataFrame, dict]:
+    """Прочитать CSV в формате организатора и проверить его. Возвращает строки и отчёт проверки файла."""
+    who = f"{name}: " if name else ""
     try:
         df = pd.read_csv(io.BytesIO(raw))
     except Exception as exc:
-        raise HTTPException(400, "Не удалось прочитать CSV") from exc
+        raise HTTPException(400, f"{who}не удалось прочитать CSV") from exc
     missing = [c for c in data.COLS if c not in df.columns]
     if missing:
-        raise HTTPException(400, f"Нет столбцов: {', '.join(missing)}")
+        raise HTTPException(400, f"{who}нет столбцов: {', '.join(missing)}")
     df = df.rename(columns=data.COLS)[list(data.COLS.values())]
     df["time"] = pd.to_datetime(df["time"], errors="coerce")
+    bad_time = int(df["time"].isna().sum())
     df = df.dropna(subset=["time"])
     if df.empty:
-        raise HTTPException(400, "В файле нет строк с корректным временем")
-    return df
+        raise HTTPException(400, f"{who}в файле нет строк с корректным временем")
+    duplicates = int(df["time"].duplicated().sum())
+    df = df.drop_duplicates("time", keep="last").sort_values("time")
+    step = df["time"].diff().dropna().mode()
+    hours = df["time"].dt.floor("1h").nunique()
+    expected = int((df["time"].max().floor("1h") - df["time"].min().floor("1h")) / pd.Timedelta(hours=1)) + 1
+    report = {
+        "name": name,
+        "rows": int(len(df)),
+        "period": [str(df["time"].min()), str(df["time"].max())],
+        "step_min": round(step.iloc[0].total_seconds() / 60) if len(step) else None,
+        "hours": int(hours),
+        "missing_hours": max(0, expected - int(hours)),
+        "power_out_of_range": int(((df["power"] < 0) | (df["power"] > 1)).sum()),
+        "duplicates": duplicates,
+        "bad_time": bad_time,
+    }
+    return df, report
+
+
+def coverage(t: Turbine) -> list[dict]:
+    """Покрытие истории турбины по месяцам: сколько часов с данными из скольких в месяце."""
+    f = _turbine_file(t)
+    if not f.is_file():
+        return []
+    hrs = pd.read_csv(f, usecols=["time"], parse_dates=["time"])["time"].dt.floor("1h").drop_duplicates()
+    out = []
+    for m, n in hrs.groupby(hrs.dt.to_period("M")).size().items():
+        out.append({"month": str(m), "hours": int(n), "expected": int(m.days_in_month * 24)})
+    return out
 
 
 def _turbine_file(t: Turbine):
@@ -135,11 +166,9 @@ async def upload_months(
         raw = await f.read(MAX_BYTES + 1)
         if len(raw) > MAX_BYTES:
             raise HTTPException(413, f"{f.filename}: файл больше 30 МБ")
-        df = _read_month(raw)
+        df, rep = _read_month(raw, f.filename or "")
         parts.append(df)
-        report.append(
-            {"name": f.filename, "rows": int(len(df)), "period": [str(df["time"].min()), str(df["time"].max())]}
-        )
+        report.append(rep)
     path = _turbine_file(t)
     if path.is_file():
         parts.insert(0, pd.read_csv(path, parse_dates=["time"]))
@@ -161,7 +190,16 @@ async def upload_months(
         "period": [t.history_start, t.history_end],
         "station_status": st.model_status,
         "curve": {"hours": curve["hours"], "bins": len(curve["points"])} if curve else None,
+        "coverage": coverage(t),
     }
+
+
+@router.get("/turbines/{turbine_id}/history/coverage")
+def turbine_coverage(turbine_id: int, db: Session = Depends(get_db)) -> dict:
+    t = db.get(Turbine, turbine_id)
+    if t is None:
+        raise HTTPException(404, "Турбина не найдена")
+    return {"turbine_id": t.id, "coverage": coverage(t)}
 
 
 @router.get("/stations/{station_id}/curve")
