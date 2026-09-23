@@ -63,6 +63,46 @@ export type UpdateInfo = {
   significant: boolean
 }
 
+/** Как агент получил погоду для выпуска (бэкенд: weather.fetch_window). */
+export type WeatherRetrieval = {
+  origin: 'network' | 'archive' | 'mixed'
+  network_ok: number
+  archive_fallback: number
+  input_updated?: boolean
+  snapshot_hash?: string
+  sources: { source: string; origin: 'network' | 'archive'; hours?: number; max_abs_diff_vs_archive?: number; reason?: string }[]
+}
+
+/** Событие автономного прогона агента по дням (POST/GET /api/autonomous-run). */
+export type AutonomousEvent = {
+  issue_date: string
+  decision: string
+  hours_with_fresher_weather: number
+  weather_origin: string | null
+  forecast_id: string
+  energy_d1: number
+  revision: {
+    previous_issue?: string | null
+    common_hours?: number | null
+    mean_abs_change?: number | null
+    hours_changed_10pp?: number | null
+    method?: string | null
+  }
+  cards: string[] // виды карточек: revision | wide_interval | input
+  validation_ok: boolean
+  mode: Mode
+  ms: number
+}
+
+export type AutonomousRun = {
+  status: 'idle' | 'running' | 'done' | 'error'
+  done: number
+  total: number
+  events: AutonomousEvent[]
+  error?: string | null
+  started_at?: string | null
+}
+
 /** Карточка внимания диспетчера (бэкенд: passport.cards). */
 export type Card = {
   kind: string // revision | wide_interval | input
@@ -94,6 +134,7 @@ export type Forecast = {
   steps: AgentStep[]
   computed_at?: string
   cards?: Card[]
+  weather_retrieval?: WeatherRetrieval | null
   passport?: Record<string, unknown> | null
 }
 

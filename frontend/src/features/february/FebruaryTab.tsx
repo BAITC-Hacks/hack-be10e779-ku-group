@@ -13,6 +13,7 @@ import { FebCalendar } from './FebCalendar'
 import { FebBarsChart, FebFinalChart } from './FebChart'
 import { FebTable } from './FebTable'
 import { FebDownloads } from './FebDownloads'
+import { AutonomousRun } from './AutonomousRun'
 import './february.css'
 
 type Load =
@@ -107,7 +108,7 @@ export default function FebruaryTab({ meta, theme, onOpenDate }: FebruaryTabProp
         return (
           <div className="feb-confirm" role="group" aria-label="Подтверждение прогона">
             <div>
-              <b>{data ? 'Прогнать весь февраль заново?' : 'Прогнать весь февраль?'}</b>
+              <b>{data ? 'Пересчитать таблицу и CSV за февраль?' : 'Посчитать таблицу и CSV за февраль?'}</b>
               <div className="small muted">
                 Перезапишет <code>outputs/forecast_feb2026.csv</code>, займёт около минуты. {runLabel} подряд, выпуски{' '}
                 {ddmm(meta.issue_range.first)}–{dateRu(meta.issue_range.last)}.
@@ -174,7 +175,7 @@ export default function FebruaryTab({ meta, theme, onOpenDate }: FebruaryTabProp
     load.state === 'ready' || load.state === 'error' ? (
       <button type="button" className="btn" onClick={askRun} disabled={running || run.state === 'confirm'}>
         {running ? <Spinner /> : <RefreshCw size={16} aria-hidden />}
-        {data ? 'Прогнать заново' : 'Прогнать весь февраль'}
+        {data ? 'Пересчитать таблицу и CSV' : 'Посчитать таблицу и CSV'}
       </button>
     ) : null
 
@@ -197,6 +198,8 @@ export default function FebruaryTab({ meta, theme, onOpenDate }: FebruaryTabProp
         Факта выработки за февраль 2026 нет — здесь только прогнозы. Качество модели проверено на истории (окт 2025 – янв 2026) — вкладка «Качество
         модели»
       </Notice>
+
+      <AutonomousRun onOpenDate={onOpenDate} />
 
       {load.state !== 'empty' && runPanel}
 
@@ -236,7 +239,7 @@ export default function FebruaryTab({ meta, theme, onOpenDate }: FebruaryTabProp
             </p>
             {run.state === 'idle' ? (
               <button type="button" className="btn btn-primary" onClick={askRun}>
-                <Play size={16} aria-hidden /> Прогнать весь февраль
+                <Play size={16} aria-hidden /> Посчитать таблицу и CSV
               </button>
             ) : (
               <div className="feb-empty-run">{runPanel}</div>

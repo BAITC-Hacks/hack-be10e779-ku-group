@@ -163,7 +163,7 @@ export default function AboutModal(props: AboutModalProps) {
                 </p>
               </div>
               <div className="ab-mode">
-                <Badge tone="demo">DEMO</Badge>
+                <Badge tone="demo">Режим проверки (без ключа)</Badge>
                 <p>Без ключа тот же цикл выполняет детерминированный планировщик — погода, модель и расчёты настоящие.</p>
               </div>
             </div>
@@ -269,7 +269,7 @@ export default function AboutModal(props: AboutModalProps) {
                     {mode === 'live' ? (
                       <Badge tone="live">LIVE · LLM{meta.llm_model ? `: ${meta.llm_model}` : ''}</Badge>
                     ) : (
-                      <Badge tone="demo">DEMO · без LLM</Badge>
+                      <Badge tone="demo">Режим проверки (без ключа)</Badge>
                     )}
                   </dd>
                 </div>

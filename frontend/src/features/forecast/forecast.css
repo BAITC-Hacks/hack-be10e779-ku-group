@@ -321,3 +321,9 @@
 }
 .fc-node-off { border-style: dashed; border-color: var(--text-3); color: var(--text-3); }
 .fc-legend-node { display: inline-grid; width: 16px; height: 16px; font-size: 9px; font-style: normal; border-width: 1.5px; vertical-align: -3px; }
+
+/* как агент получил погоду */
+.fc-retr { display: contents; }
+.fc-retr-btn { cursor: pointer; height: auto; min-height: 24px; padding: 3px 10px; }
+.fc-retr-table { flex-basis: 100%; margin-top: 6px; }
+.fc-retr-table p { margin: 6px 0 0; }

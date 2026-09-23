@@ -2,7 +2,7 @@
 // на 404/405 — экраны показывают понятное состояние вместо ошибки.
 
 import { api, ApiError } from './client'
-import type { Backtest, Forecast, Health, HistoryPoint, HoldoutPoint, Meta, Metrics } from './types'
+import type { AutonomousRun, Backtest, Forecast, Health, HistoryPoint, HoldoutPoint, Meta, Metrics } from './types'
 import { DEFAULT_META } from '../lib/constants'
 
 async function orNull<T>(p: Promise<T>): Promise<T | null> {
@@ -62,3 +62,10 @@ export const getHoldout = (issue_date: string) =>
       `/api/holdout?issue_date=${issue_date}`,
     ),
   )
+
+/** Автономный прогон агента по дням выпуска (фон). 409 — уже идёт. */
+export const startAutonomousRun = () =>
+  api<AutonomousRun>('/api/autonomous-run', { method: 'POST', body: JSON.stringify({}) })
+
+/** Прогресс автономного прогона: опрашивать раз в 2 с, пока status === 'running'. */
+export const getAutonomousRun = () => api<AutonomousRun>('/api/autonomous-run')

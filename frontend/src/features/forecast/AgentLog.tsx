@@ -89,7 +89,7 @@ function ModeBadge(props: { f: Forecast | null; metaMode: Mode; llmModel: string
   if (!f) {
     return (
       <Badge tone="neutral" title="Режим сервера. У каждого прогноза режим указан отдельно.">
-        {props.metaMode === 'live' ? 'LIVE' : 'DEMO'}
+        {props.metaMode === 'live' ? 'LIVE' : 'Режим проверки'}
       </Badge>
     )
   }
@@ -109,7 +109,7 @@ function ModeBadge(props: { f: Forecast | null; metaMode: Mode; llmModel: string
   }
   return (
     <Badge tone="demo" title="Тот же цикл прошёл детерминированный планировщик. Погода, модель и расчёты — настоящие.">
-      <span className="dot" /> DEMO · без LLM
+      <span className="dot" /> Режим проверки (без ключа)
     </Badge>
   )
 }

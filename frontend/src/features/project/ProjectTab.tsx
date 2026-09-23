@@ -194,7 +194,7 @@ export default function ProjectTab(props: ProjectTabProps) {
       <Section n="02" icon={<Bot size={18} />} title="Что делает ИИ-агент">
         <p className="pj-lead">
           Агент проходит полный цикл сам — 7 шагов-инструментов. В режиме <b>LIVE</b> порядок шагов и решения (например,
-          исключить источник погоды) выбирает LLM через вызовы инструментов. В режиме <b>DEMO</b> без ключа тот же цикл
+          исключить источник погоды) выбирает LLM через вызовы инструментов. В <b>режиме проверки</b> (без ключа) тот же цикл
           выполняет планировщик по тем же правилам. <b>Числа LLM не придумывает</b> — всё считает код; агент управляет шагами
           и объясняет результат.
         </p>
@@ -270,7 +270,7 @@ export default function ProjectTab(props: ProjectTabProps) {
             Тест в коде перебирает каждый использованный выпуск погоды и проверяет, что он опубликован до момента прогноза.
           </li>
           <li>Факта выработки за февраль нет — в интерфейсе для февраля только прогнозы, без выдуманных «фактов».</li>
-          <li>Режим DEMO / LIVE всегда подписан: записанные ответы не выдаются за живую работу LLM.</li>
+          <li>Режим (LIVE или режим проверки без ключа) всегда подписан: записанные ответы не выдаются за живую работу LLM.</li>
         </ul>
       </Section>
 
@@ -320,7 +320,7 @@ export default function ProjectTab(props: ProjectTabProps) {
               <dt>Сборка сервера</dt>
               <dd className="mono">{commit ?? '—'}</dd>
               <dt>Режим агента</dt>
-              <dd>{props.meta.mode === 'live' ? `LIVE · ${props.meta.llm_model ?? 'LLM'}` : 'DEMO · без LLM'}</dd>
+              <dd>{props.meta.mode === 'live' ? `LIVE · ${props.meta.llm_model ?? 'LLM'}` : 'Режим проверки (без ключа)'}</dd>
               <dt>Прогнозы за период</dt>
               <dd>
                 {props.meta.issue_range.first} … {props.meta.issue_range.last}

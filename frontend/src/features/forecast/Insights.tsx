@@ -16,7 +16,7 @@ export function Explanation(props: { f: Forecast; llmModel: string | null }) {
     ? `Сформулировано: LLM${props.llmModel ? ` (${props.llmModel})` : ''}`
     : f.mode === 'live'
       ? 'LLM не завершила цикл, досчитал планировщик — текст мог быть сформирован по шаблону'
-      : 'Сформулировано по шаблону (DEMO, без LLM)'
+      : 'Сформулировано по шаблону (режим проверки, без ключа LLM)'
   return (
     <Card
       className="fc-explain"
