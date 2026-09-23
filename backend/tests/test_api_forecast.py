@@ -283,7 +283,9 @@ def test_history_bad_params_are_400(params):
 BT_COLS = "issue_date,issued_at,forecast_id,outside_test_period,time,lead_day,weather_run_days,p50,p10,p90,t1,t2,curve"
 
 
-def save_issue(store, issue: str, suffix: str = "aaaa0000", created: str = "2026-09-23T10:00:00+00:00") -> dict:
+def save_issue(
+    store, issue: str, suffix: str = "aaaa0000", created: str = "2026-09-23T10:00:00+00:00", mode: str = "deterministic"
+) -> dict:
     f = fake_agent(issue)
     f["cards"] = [
         {
@@ -296,7 +298,14 @@ def save_issue(store, issue: str, suffix: str = "aaaa0000", created: str = "2026
             "action": "держать резерв",
         }
     ]
-    pas = {"forecast_id": f"{issue}_{suffix}", "created_at": created, "as_of_status": "verified_by_rule"}
+    pas = {
+        "forecast_id": f"{issue}_{suffix}",
+        "created_at": created,
+        "as_of_status": "verified_by_rule",
+        "execution_mode": mode,
+    }
+    if mode == "llm":
+        f["mode"], f["summary"] = "live", {**f["summary"], "energy_d1": 1.0}
     (store / f"{issue}_{suffix}.json").write_text(json.dumps({"passport": pas, "forecast": f}, ensure_ascii=False))
     return pas
 
@@ -399,6 +408,23 @@ def test_backtest_from_store(store, csvs):
     assert len(b["final_hours"]) == 48 and b["final_hours"][0]["issue_date"] == "2026-01-31"
 
 
+def test_live_version_does_not_replace_calendar(store, csvs):
+    import os
+
+    save_issue(store, "2026-02-01", "plan0000", created="plan")
+    save_issue(store, "2026-02-01", "live0000", created="live", mode="llm")
+    os.utime(store / "2026-02-01_plan0000.json", (1, 1))  # LIVE-версия новее
+    day = client.get("/api/backtest").json()["forecasts"][0]
+    assert day["energy_d1"] == 7.2  # календарь — версия планировщика
+    f = client.get("/api/forecast/2026-02-01").json()
+    assert f["mode"] == "live" and f["passport"]["execution_mode"] == "llm" and f["summary"]["energy_d1"] == 1.0
+
+
+def test_backtest_only_live_versions_is_404(store, csvs):
+    save_issue(store, "2026-02-01", "live0000", mode="llm")
+    assert client.get("/api/backtest").status_code == 404
+
+
 def test_backtest_empty_store_is_404(store, csvs):
     assert client.get("/api/backtest").status_code == 404
 
@@ -434,7 +460,11 @@ def holdout_file(tmp_path, monkeypatch):
             rows.append(f"{t:%Y-%m-%dT%H:%M},{lead},0.5,0.2,0.8,0.3,{actual}")
     f = tmp_path / "holdout.csv"
     f.write_text("\n".join(rows), encoding="utf-8")
+    meta = tmp_path / "holdout.json"
+    meta.write_text(json.dumps({"calibration_id": "cal-1"}))
     monkeypatch.setattr(api, "HOLDOUT_FILE", f)
+    monkeypatch.setattr(api, "HOLDOUT_META", meta)
+    monkeypatch.setattr(api, "_calibration_id", lambda: "cal-1")
     return f
 
 
@@ -455,15 +485,33 @@ def test_holdout_bad_date_is_400(holdout_file, bad):
 
 
 def test_holdout_built_once_when_missing(tmp_path, monkeypatch):
-    target = tmp_path / "h.csv"
+    target, meta = tmp_path / "h.csv", tmp_path / "h.json"
     monkeypatch.setattr(api, "HOLDOUT_FILE", target)
+    monkeypatch.setattr(api, "HOLDOUT_META", meta)
+    monkeypatch.setattr(api, "_calibration_id", lambda: "cal-1")
     calls = []
 
     def fake_build():
         calls.append(1)
         target.write_text("time,lead_day,p50,p10,p90,curve,actual\n2026-01-21T00:00,1,0.5,0.2,0.8,0.3,0.4\n")
+        meta.write_text(json.dumps({"calibration_id": api._calibration_id()}))
 
     monkeypatch.setattr(api, "build_holdout", fake_build)
     assert client.get("/api/holdout", params={"issue_date": "2026-01-20"}).status_code == 200
     assert client.get("/api/holdout", params={"issue_date": "2026-01-20"}).status_code == 200
     assert calls == [1]
+
+
+def test_holdout_rebuilt_when_calibration_changed(holdout_file, monkeypatch):
+    calls = []
+    monkeypatch.setattr(api, "_calibration_id", lambda: "cal-2")  # калибровку пересобрали после расчёта holdout
+    monkeypatch.setattr(api, "build_holdout", lambda: calls.append(1))
+    assert client.get("/api/holdout", params={"issue_date": "2026-01-20"}).status_code == 200
+    assert calls == [1]
+
+
+def test_repo_holdout_is_fresh():
+    """outputs/holdout_jan2026.csv посчитан с текущей калибровкой — иначе эксперт увидит январь по старой модели."""
+    if not api.HOLDOUT_FILE.is_file():
+        pytest.skip("holdout ещё не посчитан")
+    assert api._holdout_fresh(), "holdout устарел: пересчитайте app.api.forecast.build_holdout()"

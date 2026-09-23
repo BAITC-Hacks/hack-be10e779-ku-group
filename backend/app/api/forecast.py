@@ -40,6 +40,9 @@ METRICS_FILE = OUTPUTS / "metrics.json"
 BACKTEST_FILE = "outputs/forecast_feb2026.csv"
 BACKTEST_CSV = {"all": OUTPUTS / "forecast_feb2026.csv", "final": OUTPUTS / "forecast_feb2026_final.csv"}
 HOLDOUT_FILE = OUTPUTS / "holdout_jan2026.csv"
+HOLDOUT_META = (
+    OUTPUTS / "holdout_jan2026.json"
+)  # хеш калибровки, с которой посчитан holdout — чтобы не отдать устаревший
 HOLDOUT_ISSUES = (pd.Timestamp("2026-01-01"), pd.Timestamp("2026-01-29"))  # D+2 последнего выпуска — 31.01
 HISTORY_MAX_DAYS = 62
 WARM_TIMEOUT_S = 300
@@ -94,6 +97,19 @@ def _issue(value: str) -> str:
     return _call(pipeline.check_issue_date, value).strftime("%Y-%m-%d")
 
 
+OFFICIAL_MODE = "deterministic"  # официальный прогон февраля (планировщик без LLM) — календарь и CSV
+
+
+def _latest(issue_date: str, execution_mode: str | None = None) -> dict | None:
+    """Последняя по времени файла версия выпуска из outputs/forecasts; `execution_mode` — только версии этого режима
+    (passport.execution_mode: deterministic | llm)."""
+    for path in sorted(passport.STORE.glob(f"{issue_date}_*.json"), key=lambda p: p.stat().st_mtime, reverse=True):
+        stored = json.loads(path.read_text(encoding="utf-8"))
+        if execution_mode is None or stored["passport"].get("execution_mode") == execution_mode:
+            return stored
+    return None
+
+
 def _saved(stored: dict) -> Forecast:
     """Сохранённый выпуск из outputs/forecasts: прогноз + паспорт; computed_at — когда выпуск создан."""
     return Forecast(**stored["forecast"], passport=stored["passport"], computed_at=stored["passport"]["created_at"])
@@ -108,8 +124,8 @@ def forecast(body: ForecastIn) -> Forecast:
 
 @router.get("/forecast/{issue_date}", response_model=Forecast)
 def saved_forecast(issue_date: str) -> Forecast:
-    """Последняя сохранённая версия выпуска (passport.latest) — без пересчёта."""
-    stored = passport.latest(_issue(issue_date))
+    """Последняя сохранённая версия выпуска любого режима (в т. ч. LIVE) — без пересчёта; режим — в passport."""
+    stored = _latest(_issue(issue_date))
     if stored is None:
         raise HTTPException(status_code=404, detail="Прогноз на эту дату ещё не делали")
     return _saved(stored)
@@ -143,10 +159,11 @@ def meta() -> Meta:
 
 
 def _backtest_from_store() -> Backtest:
-    """28 выпусков февраля: последние сохранённые версии из outputs/forecasts (с флагами, как в интерфейсе)."""
+    """28 выпусков февраля — официальный прогон: последние версии с execution_mode = deterministic (то же, что в CSV).
+    LIVE-прогнозы диспетчера календарь не подменяют, они доступны через GET /api/forecast/{date}."""
     days, final, created = [], [], []
     for d in pd.date_range(pipeline.FIRST_ISSUE, pipeline.LAST_ISSUE, freq="1D"):
-        stored = passport.latest(d.strftime("%Y-%m-%d"))
+        stored = _latest(d.strftime("%Y-%m-%d"), OFFICIAL_MODE)
         if stored is None:
             continue
         f, hours = stored["forecast"], stored["forecast"]["hours"]
@@ -269,12 +286,24 @@ def build_holdout() -> pd.DataFrame:
     ).sort_values(["lead_day", "time"])
     OUTPUTS.mkdir(exist_ok=True)
     out.to_csv(HOLDOUT_FILE, index=False)
+    HOLDOUT_META.write_text(json.dumps({"calibration_id": _calibration_id()}, ensure_ascii=False), encoding="utf-8")
     return out
+
+
+def _calibration_id() -> str:
+    """Хеш outputs/calibration.json: меняется при каждой пересборке калибровки (граница обучения, модель)."""
+    return passport._hash(calibrate.load())[:12]
+
+
+def _holdout_fresh() -> bool:
+    if not (HOLDOUT_FILE.is_file() and HOLDOUT_META.is_file()):
+        return False
+    return json.loads(HOLDOUT_META.read_text(encoding="utf-8")).get("calibration_id") == _calibration_id()
 
 
 def _holdout_table() -> pd.DataFrame:
     with _holdout_lock:
-        if not HOLDOUT_FILE.is_file():
+        if not _holdout_fresh():
             build_holdout()
         return pd.read_csv(HOLDOUT_FILE)
 
