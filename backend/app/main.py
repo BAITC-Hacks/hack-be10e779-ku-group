@@ -10,6 +10,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.ai.llm import LLMBadOutput, LLMClient, LLMUnavailable
 from app.api import forecast as forecast_api
+from app.api import stations as stations_api
 from app.config import settings
 from app.db import init_db
 from app.schemas import Health
@@ -18,6 +19,7 @@ from app.schemas import Health
 @asynccontextmanager
 async def lifespan(_: FastAPI):
     init_db()
+    stations_api.seed_case_station()
     # модель прогноза обучается ~60 с — в фоне, чтобы /health отвечал сразу, а первый прогноз не ждал обучения
     threading.Thread(target=forecast_api.warm_up, name="warm-up", daemon=True).start()
     yield
@@ -54,6 +56,7 @@ def health() -> Health:
 
 # роутеры подключаются здесь: app.include_router(<router>, prefix="/api")
 app.include_router(forecast_api.router, prefix="/api")
+app.include_router(stations_api.router, prefix="/api")
 
 
 @app.exception_handler(StarletteHTTPException)

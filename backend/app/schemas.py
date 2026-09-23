@@ -85,6 +85,7 @@ class Forecast(BaseModel):
     passport: dict[str, Any] | None = None  # паспорт выпуска: forecast_id, входы, версии модели и калибровки, хеши
     fallback: bool | None = None  # LIVE, но цикл досчитал планировщик (фронт умеет вычислять сам по журналу)
     computed_at: str | None = None  # когда выпуск создан (passport.created_at)
+    weather_retrieval: dict[str, Any] | None = None  # как агент получил погоду: origin, snapshot_hash, sources[]
 
 
 class Station(BaseModel):

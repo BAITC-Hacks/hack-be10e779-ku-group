@@ -14,10 +14,11 @@ from datetime import date, datetime, timedelta
 
 import httpx
 import pandas as pd
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import FileResponse
 
 from app.ai.llm import LLMClient
+from app.auth import require
 from app.config import ROOT_DIR, settings
 from app.forecast import agent, calibrate, cli, data, model, passport, pipeline, weather
 from app.schemas import (
@@ -116,7 +117,7 @@ def _saved(stored: dict) -> Forecast:
 
 
 @router.post("/forecast", response_model=Forecast)
-def forecast(body: ForecastIn) -> Forecast:
+def forecast(body: ForecastIn, _user: dict = Depends(require("dispatcher"))) -> Forecast:
     """Полный цикл агента; выпуск сохраняется агентом в outputs/forecasts (неизменяемая версия с паспортом)."""
     res = _call(run_cycle, body.issue_date)
     return Forecast(**res, computed_at=(res.get("passport") or {}).get("created_at"))
@@ -200,7 +201,7 @@ def backtest_saved() -> Backtest:
 
 
 @router.post("/backtest", response_model=Backtest)
-def backtest(body: BacktestIn | None = None) -> Backtest:
+def backtest(body: BacktestIn | None = None, _user: dict = Depends(require("analyst"))) -> Backtest:
     """Прогон всего февраля заново (агент, планировщик без LLM) → outputs/forecasts и CSV.
     Частичный период не принимаем: он перезаписал бы CSV неполным набором."""
     body = body or BacktestIn()
@@ -356,7 +357,7 @@ def _auto_worker(start: str, end: str, use_llm: bool) -> None:
 
 
 @router.post("/autonomous-run")
-def start_autonomous_run(body: dict | None = None) -> dict:
+def start_autonomous_run(body: dict | None = None, _user: dict = Depends(require("analyst"))) -> dict:
     """Запустить в фоне автономный прогон агента по дням выпуска (по умолчанию 31.01–27.02). Прогресс — GET."""
     body = body or {}
     start, end = body.get("start", "2026-01-31"), body.get("end", "2026-02-27")

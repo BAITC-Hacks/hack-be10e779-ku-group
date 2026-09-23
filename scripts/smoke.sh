@@ -21,8 +21,19 @@ done
 [ "$STATE" = "ready" ] || fail "модель не прогрелась за ${WAIT_S} с (состояние: $STATE)"
 ok "модель прогрета ($((i)) с)"
 
+# 3а. вход тестовой учёткой диспетчера (учётки — в README); без входа прогноз запрещён (401)
+CODE=$(curl -sS -o /dev/null -w '%{http_code}' -X POST "$BASE/api/forecast" -H 'Content-Type: application/json' \
+  -d '{"issue_date":"2026-02-09"}')
+[ "$CODE" = "401" ] || [ "$CODE" = "200" ] || fail "прогноз без входа: ожидался 401, получен $CODE"
+TOKEN=$(curl -fsS -X POST "$BASE/api/auth/login" -H 'Content-Type: application/json' \
+  -d "{\"username\":\"${SMOKE_USER:-dispatcher}\",\"password\":\"${SMOKE_PASS:-dispatcher123}\"}" \
+  | grep -o '"token":"[^"]*"' | cut -d'"' -f4) || fail "POST /api/auth/login"
+[ -n "$TOKEN" ] || fail "вход: нет токена"
+AUTH="Authorization: Bearer $TOKEN"
+ok "вход тестовой учёткой, без входа — $CODE"
+
 # 3. прогноз агента на 2026-02-09: 48 часов, погода выпущена до момента прогноза, есть шаги цикла
-F=$(curl -fsS --max-time 120 -X POST "$BASE/api/forecast" -H 'Content-Type: application/json' \
+F=$(curl -fsS --max-time 120 -X POST "$BASE/api/forecast" -H 'Content-Type: application/json' -H "$AUTH" \
   -d '{"issue_date":"2026-02-09"}') || fail "POST /api/forecast"
 [ "$(grep -o '"lead_day"' <<<"$F" | wc -l)" -eq 48 ] || fail "прогноз: не 48 часов"
 grep -q '"time_integrity":{[^}]*"ok":true' <<<"$F" || fail "прогноз: проверка честности по времени не пройдена"
@@ -33,7 +44,7 @@ ok "прогноз 2026-02-09: 48 ч, режим $(grep -o '"mode":"[a-z]*"' <<<
 
 # 4. ошибка на дату вне тестового периода — 400 с понятным текстом
 CODE=$(curl -sS -o /dev/null -w '%{http_code}' -X POST "$BASE/api/forecast" -H 'Content-Type: application/json' \
-  -d '{"issue_date":"2026-03-15"}')
+  -H "$AUTH" -d '{"issue_date":"2026-03-15"}')
 [ "$CODE" = "400" ] || fail "дата вне периода: ожидался 400, получен $CODE"
 ok "дата вне периода → 400"
 

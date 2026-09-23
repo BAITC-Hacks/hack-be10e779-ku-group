@@ -138,3 +138,9 @@
 - решение · в ответе прогноза поле `weather_retrieval` {origin network|archive|mixed, network_ok, archive_fallback, input_updated, snapshot_hash, sources[]}.
 - решение · `agent.autonomous_run` + `POST/GET /api/autonomous-run` (фон, 409 если идёт): по дням выпуска агент проверяет, вышел ли для уже спрогнозированных часов более свежий выпуск погоды (weather_run_days уменьшился) → пересчёт, новая версия, пересмотр. Событие: {issue_date, decision, hours_with_fresher_weather, weather_origin, forecast_id, energy_d1, revision{…}, cards[], validation_ok, mode, ms}. ~10 с на день.
 - решение · режим без ключа остаётся: п. 5.4.16 (не запустилось по README — не допускается) и п. 5.6.6 (проверка без личных ключей). LIVE — основной (деплой с ключом), без ключа — «режим проверки для эксперта».
+
+## Авторизация и станции (16:40, Максим)
+- решение · `app/auth.py`: роли dispatcher < analyst < admin, HMAC-токен 12 ч. GET открыты; POST /api/forecast — dispatcher+, /api/backtest и /api/autonomous-run — analyst+, станции/турбины/история — admin. Тестовые учётки (п. 5.6.6): admin/admin123, analyst/analyst123, dispatcher/dispatcher123. AUTH_REQUIRED=0 отключает проверку (так в тестах).
+- решение · POST /api/auth/login {username,password} → {token, user{username,role}, expires_in}; GET /api/auth/me; заголовок `Authorization: Bearer <token>`; 401 — нет входа, 403 — мало прав.
+- решение · `app/api/stations.py`, таблицы stations/turbines: GET /api/stations (станция кейса сидится при старте); POST /api/stations, POST /api/stations/{id}/turbines, POST /api/turbines/{id}/history (CSV организатора, проверка столбцов/шага/мощности, файл в data/uploads/). Обучение новой станции в этой версии НЕ выполняется — это видно в статусе станции.
+- находка · `weather_retrieval` отрезался схемой Forecast (сообщила Оксана) → поле добавлено в schemas.py, GET /api/forecast/{date} его отдаёт.
