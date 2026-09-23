@@ -25,7 +25,7 @@ import './about.css'
 const STAGE_INFO: Record<Stage, { icon: ReactNode; text: string }> = {
   Погода: {
     icon: <CloudDownload size={16} />,
-    text: 'архивный прогноз Open-Meteo, выпущенный до момента прогноза; оценка источников, ненадёжные исключаются',
+    text: 'архивный прогноз Open-Meteo, выпущенный до момента прогноза; источники с пропусками данных исключаются',
   },
   Подготовка: {
     icon: <SlidersHorizontal size={16} />,

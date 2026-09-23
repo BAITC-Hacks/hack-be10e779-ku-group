@@ -10,6 +10,7 @@ const TOOLS: Record<string, { label: string; stage: Stage }> = {
   fetch_weather: { label: 'Архивный прогноз погоды', stage: 'Погода' },
   build_features: { label: 'Подготовка признаков', stage: 'Подготовка' },
   run_forecast: { label: 'Модель и почасовой прогноз', stage: 'Модель' },
+  validate_forecast: { label: 'Проверка результата перед выдачей', stage: 'Анализ' },
   analyze_forecast: { label: 'Анализ результата', stage: 'Анализ' },
   compare_with_previous: { label: 'Пересчёт: сравнение с прошлым выпуском', stage: 'Пересчёт' },
   // v1 — backend/app/api/forecast.py (_steps)

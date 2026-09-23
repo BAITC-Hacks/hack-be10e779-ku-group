@@ -5,8 +5,8 @@ import type { Card } from '../../api/types'
 import { hourOf, num, pct } from '../../lib/format'
 import { dayLabel, prettyDates } from './model'
 
-/** Порог «высокой неуверенности» — тот же, что во флаге бэкенда (pipeline.analyze: ширина интервала > 0.45). */
-export const WIDE = 0.45
+/** Порог «высокой неуверенности» — тот же, что во флаге бэкенда (pipeline.WIDE_MEAN: средняя ширина интервала > 0.60). */
+export const WIDE = 0.6
 
 /** «10.02 вт, 00:00–23:00» или «10.02 вт 00:00 – 11.02 ср 23:00». */
 export function hoursRange(hours: string[]): string {

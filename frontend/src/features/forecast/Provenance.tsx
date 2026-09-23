@@ -75,9 +75,9 @@ export function Provenance(props: { f: Forecast }) {
         <span className="fc-wrap">Погода: архив прогнозов Open-Meteo, 7 мировых моделей</span>
       </Badge>
       {excluded.length > 0 && (
-        <Badge tone="info" icon={<Filter size={14} />} title="Источники погоды, которые агент исключил (причина — в шаге «Оценка источников погоды»)">
+        <Badge tone="info" icon={<Filter size={14} />} title="Источники погоды, которые агент исключил: пропуски данных на часы прогноза (подробно — в шаге «Оценка источников погоды»)">
           <span className="fc-wrap">
-            Агент отбросил ненадёжное: {excluded.map(prettySource).join(', ')}
+            Агент отбросил неполные данные: {excluded.map(prettySource).join(', ')}
           </span>
         </Badge>
       )}
