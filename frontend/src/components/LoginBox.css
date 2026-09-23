@@ -1,4 +1,4 @@
-.loginbox { position: relative; }
+.loginbox { position: relative; display: flex; gap: 6px; }
 .loginbox-panel {
   position: absolute; right: 0; top: calc(100% + 8px); z-index: 50;
   width: min(320px, calc(100vw - 32px));

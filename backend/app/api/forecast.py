@@ -233,8 +233,13 @@ def backtest_csv(kind: str = Query("all")) -> FileResponse:
 @router.get("/metrics", response_model=MetricsOut)
 def metrics() -> MetricsOut:
     if METRICS_FILE.is_file():
-        return MetricsOut(**json.loads(METRICS_FILE.read_text(encoding="utf-8")))
-    return MetricsOut(**model.holdout_metrics())
+        out = MetricsOut(**json.loads(METRICS_FILE.read_text(encoding="utf-8")))
+    else:
+        out = MetricsOut(**model.holdout_metrics())
+    cal = OUTPUTS / "calibration.json"
+    if out.calibration is None and cal.is_file():
+        out.calibration = json.loads(cal.read_text(encoding="utf-8"))
+    return out
 
 
 def _day(value: str, name: str) -> date:

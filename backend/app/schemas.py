@@ -85,6 +85,7 @@ class Forecast(BaseModel):
     passport: dict[str, Any] | None = None  # паспорт выпуска: forecast_id, входы, версии модели и калибровки, хеши
     fallback: bool | None = None  # LIVE, но цикл досчитал планировщик (фронт умеет вычислять сам по журналу)
     computed_at: str | None = None  # когда выпуск создан (passport.created_at)
+    validation: dict[str, Any] | None = None  # validate_forecast: ok, n_fixed, n_problems, проверки
     weather_retrieval: dict[str, Any] | None = None  # как агент получил погоду: origin, snapshot_hash, sources[]
 
 
@@ -185,6 +186,7 @@ class MetricRow(BaseModel):
 class MetricsOut(BaseModel):
     holdout: str
     rows: list[MetricRow]
+    calibration: dict[str, Any] | None = None  # outputs/calibration.json: покрытие p10–p90 до/после калибровки
 
 
 class HistoryPoint(BaseModel):

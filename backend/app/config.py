@@ -22,7 +22,9 @@ class Settings(BaseSettings):
     # авторизация: действия (прогноз, прогоны, станции) — по ролям; чтение открыто. Тестовые учётки — в README.
     auth_required: bool = True
     auth_secret: str = "change-me-in-production"
-    auth_users: str = "admin:admin123:admin,analyst:analyst123:analyst,dispatcher:dispatcher123:dispatcher"
+    auth_users: str = (
+        "admin:admin123:admin,analyst:analyst123:analyst,dispatcher:dispatcher123:dispatcher,demo:demo:admin"
+    )
 
     @property
     def live(self) -> bool:

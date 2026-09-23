@@ -14,6 +14,7 @@ const ROLE_KEY: Record<string, TKey> = {
   admin: 'app.login.admin',
 }
 const TEST_USERS: [string, string, TKey][] = [
+  ['demo', 'demo', 'app.login.canDemo'],
   ['dispatcher', 'dispatcher123', 'app.login.canDispatcher'],
   ['analyst', 'analyst123', 'app.login.canAnalyst'],
   ['admin', 'admin123', 'app.login.canAdmin'],
@@ -49,14 +50,15 @@ export function LoginBox() {
     return () => window.removeEventListener('auth-required', onAuth)
   }, [])
 
-  const submit = async (e: FormEvent) => {
-    e.preventDefault()
+  const submit = async (e?: FormEvent, as?: [string, string]) => {
+    e?.preventDefault()
+    const [u, p] = as ?? [username, password]
     setBusy(true)
     setError(null)
     try {
       const res = await api<{ token: string; user: User }>('/api/auth/login', {
         method: 'POST',
-        body: JSON.stringify({ username, password }),
+        body: JSON.stringify({ username: u, password: p }),
       })
       setToken(res.token)
       setUser(res.user)
@@ -80,14 +82,23 @@ export function LoginBox() {
       {user ? (
         <button className="btn btn-ghost btn-sm" onClick={logout} title={t('app.login.logout')}>
           <span className="hide-sm">
-            {user.username} · {ROLE_KEY[user.role] ? t(ROLE_KEY[user.role]) : user.role}
+            {user.username === 'demo' ? t('app.login.demoUser') : user.username} · {ROLE_KEY[user.role] ? t(ROLE_KEY[user.role]) : user.role}
           </span>
           <LogOut size={16} />
         </button>
       ) : (
-        <button className="btn btn-sm" onClick={() => setOpen((o) => !o)}>
+        <>
+          <button
+            className="btn btn-ghost btn-sm"
+            onClick={() => submit(undefined, ['demo', 'demo'])}
+            title={t('app.login.demoTitle')}
+          >
+            <span className="hide-sm">{t('app.login.demoButton')}</span>
+          </button>
+          <button className="btn btn-sm" onClick={() => setOpen((o) => !o)}>
           <LogIn size={16} /> <span className="hide-sm">{t('app.login.login')}</span>
-        </button>
+          </button>
+        </>
       )}
       {open && !user && (
         <form className="loginbox-panel" onSubmit={submit}>
