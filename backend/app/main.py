@@ -1,6 +1,7 @@
 """Точка входа FastAPI: /health, роутеры /api/*, раздача собранного frontend (один контейнер, один порт)."""
 
 import logging
+import threading
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
@@ -17,6 +18,8 @@ from app.schemas import Health
 @asynccontextmanager
 async def lifespan(_: FastAPI):
     init_db()
+    # модель прогноза обучается ~60 с — в фоне, чтобы /health отвечал сразу, а первый прогноз не ждал обучения
+    threading.Thread(target=forecast_api.warm_up, name="warm-up", daemon=True).start()
     yield
 
 
@@ -45,7 +48,7 @@ async def unhandled(request: Request, exc: Exception):
 
 @app.get("/health", response_model=Health)
 def health() -> Health:
-    return Health(status="ok", mode=LLMClient().mode, commit=settings.build_commit)
+    return Health(status="ok", mode=LLMClient().mode, commit=settings.build_commit, model=forecast_api.warm["state"])
 
 
 # роутеры подключаются здесь: app.include_router(<router>, prefix="/api")

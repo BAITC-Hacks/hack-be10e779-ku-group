@@ -1,10 +1,13 @@
 """API прогноза ВЭС (docs/api-contract.md): POST /api/forecast, POST /api/backtest, GET /api/metrics, GET /api/history.
 
-Тонкий слой над app.forecast: вызывает цикл ТЗ, приводит результат к схемам app/schemas.py, ошибки — {"detail"} + код.
-Пока агента нет, /api/forecast вызывает pipeline.full_cycle; замена на агента — в функции run_cycle.
+Тонкий слой над app.forecast: /api/forecast — агент (app.forecast.agent.run), ответ по схемам app/schemas.py,
+ошибки — {"detail"} + код. Модель обучается ~60 с, поэтому при старте её прогревают в фоне (warm_up, см. main.py);
+запрос, пришедший во время прогрева, ждёт его окончания, а не обучает модель второй раз.
 """
 
 import json
+import logging
+import threading
 from datetime import date, datetime, timedelta
 
 import httpx
@@ -12,9 +15,8 @@ import pandas as pd
 from fastapi import APIRouter, HTTPException, Query
 
 from app.config import ROOT_DIR
-from app.forecast import cli, data, model, pipeline
+from app.forecast import agent, calibrate, cli, data, model, pipeline
 from app.schemas import (
-    AgentStep,
     BacktestIn,
     BacktestItem,
     BacktestOut,
@@ -26,15 +28,38 @@ from app.schemas import (
 )
 
 router = APIRouter(tags=["forecast"])
+log = logging.getLogger("app")
 
 METRICS_FILE = ROOT_DIR / "outputs" / "metrics.json"
 BACKTEST_FILE = "outputs/forecast_feb2026.csv"
 HISTORY_MAX_DAYS = 93
+WARM_TIMEOUT_S = 300
+
+warm = {"state": "cold"}  # cold → warming → ready | error; показывается в /health
+_warm_done = threading.Event()
+
+
+def warm_up() -> None:
+    """Обучить модель и загрузить калибровку заранее (вызывается в фоне при старте приложения)."""
+    if warm["state"] in ("warming", "ready"):
+        return
+    warm["state"] = "warming"
+    try:
+        model.get_forecaster()
+        calibrate.load()
+        warm["state"] = "ready"
+    except Exception:
+        log.exception("Прогрев модели не удался — модель обучится при первом запросе")
+        warm["state"] = "error"
+    finally:
+        _warm_done.set()
 
 
 def run_cycle(issue_date: str) -> dict:
-    """Точка замены: сейчас детерминированный цикл, позже — агент."""
-    return pipeline.full_cycle(issue_date)
+    """Полный цикл ТЗ через агента: LIVE — шаги выбирает LLM, DEMO — детерминированный планировщик."""
+    if warm["state"] == "warming":
+        _warm_done.wait(WARM_TIMEOUT_S)
+    return agent.run(issue_date)
 
 
 def _call(fn, *args):
@@ -49,90 +74,9 @@ def _call(fn, *args):
         ) from exc
 
 
-def _steps(res: dict) -> list[AgentStep]:
-    """Шаги цикла из результата full_cycle. Время шагов цикл пока не отдаёт — ms=0 (появится с агентом)."""
-    w, s, upd = res["weather"], res["summary"], res["update"]
-    return [
-        AgentStep(
-            type="tool",
-            name="fetch_weather",
-            ok=True,
-            ms=0,
-            arguments=json.dumps({"issue_date": res["issue_date"]}),
-            output=f"{w['source']}: {w['hours']} ч, пропусков {w['missing_hours']}, "
-            f"ветер 100 м средний {w['wind_100m_mean']} м/с, максимум {w['wind_100m_max']} м/с",
-        ),
-        AgentStep(
-            type="tool", name="prepare_features", ok=True, ms=0, output=f"признаки на {len(res['hours'])} ч (D+1 и D+2)"
-        ),
-        AgentStep(
-            type="tool",
-            name="run_model",
-            ok=True,
-            ms=0,
-            output="прогноз станции p10/p50/p90, по турбинам и кривая мощности",
-        ),
-        AgentStep(
-            type="tool",
-            name="hourly_forecast",
-            ok=True,
-            ms=0,
-            output=f"D+1: {s['energy_d1']} ч на полной мощности, D+2: {s['energy_d2']} ч, пик {s['peak_hour']}",
-        ),
-        AgentStep(
-            type="tool",
-            name="analyze_forecast",
-            ok=True,
-            ms=0,
-            output="; ".join(res["flags"]) or "проверки пройдены, замечаний нет",
-        ),
-        AgentStep(
-            type="tool",
-            name="compare_with_previous",
-            ok=True,
-            ms=0,
-            output=f"сутки {upd['day']} против выпуска {upd['previous_issue']}: "
-            f"средний сдвиг {upd['mean_abs_change']}, максимум {upd['max_abs_change']}",
-        ),
-    ]
-
-
-def _explanation(res: dict) -> str:
-    """Объяснение по шаблону (без LLM): что ждать, где пик, на что обратить внимание, что изменилось."""
-    s, upd = res["summary"], res["update"]
-    parts = [
-        f"Прогноз от {res['issue_date']} (шаблон без LLM). Сутки D+1: {s['energy_d1']} ч работы на полной мощности "
-        f"(средняя загрузка {s['energy_d1'] / 24:.0%}); D+2: {s['energy_d2']} ч ({s['energy_d2'] / 24:.0%}).",
-        f"Пик выработки — {s['peak_hour']}; часов почти без выработки — {s['low_hours']}.",
-    ]
-    if res["flags"]:
-        parts.append("Внимание: " + "; ".join(res["flags"]) + ".")
-    change = "существенно" if upd["significant"] else "незначительно"
-    parts.append(
-        f"Относительно выпуска {upd['previous_issue']} прогноз на {upd['day']} изменился {change}: "
-        f"{upd['energy_old']} → {upd['energy_new']} ч."
-    )
-    return " ".join(parts)
-
-
-def to_forecast(res: dict) -> Forecast:
-    return Forecast(
-        issue_date=res["issue_date"],
-        issued_at=f"{res['issue_date']}T23:59",
-        weather_source=res["weather"]["source"],
-        weather_runs=res["weather"]["runs"],
-        hours=res["hours"],
-        summary=res["summary"],
-        analysis={"flags": res["flags"], "changed_vs_previous": res["update"]["mean_abs_change"]},
-        explanation=_explanation(res),
-        mode="demo",
-        steps=_steps(res),
-    )
-
-
 @router.post("/forecast", response_model=Forecast)
 def forecast(body: ForecastIn) -> Forecast:
-    return to_forecast(_call(run_cycle, body.issue_date))
+    return Forecast(**_call(run_cycle, body.issue_date))
 
 
 @router.post("/backtest", response_model=BacktestOut)
@@ -141,9 +85,12 @@ def backtest(body: BacktestIn) -> BacktestOut:
     end = _call(pipeline.check_issue_date, body.end)
     if start > end:
         raise HTTPException(status_code=400, detail="Начало периода позже конца")
+    if warm["state"] == "warming":
+        _warm_done.wait(WARM_TIMEOUT_S)
+    # бэктест — детерминированный цикл pipeline, тот же, которым cli.backtest пишет CSV (без LLM: 28 выпусков подряд)
     items = []
     for d in pd.date_range(start, end, freq="1D"):
-        res = _call(run_cycle, d.strftime("%Y-%m-%d"))
+        res = _call(pipeline.full_cycle, d.strftime("%Y-%m-%d"))
         items.append(
             BacktestItem(issue_date=res["issue_date"], energy_d1=res["summary"]["energy_d1"], flags=res["flags"])
         )

@@ -1,7 +1,7 @@
 """API прогноза ВЭС: /api/forecast, /api/backtest, /api/metrics, /api/history (docs/api-contract.md).
 
-Большинство тестов подменяет pipeline.full_cycle — быстро и без записи файлов в outputs/.
-test_forecast_real_cycle прогоняет настоящий цикл (первый вызов обучает модель, ~1 мин).
+Большинство тестов подменяет agent.run / pipeline.full_cycle — быстро и без записи файлов в outputs/.
+test_forecast_real_agent прогоняет настоящего агента в DEMO (первый вызов обучает модель, ~1 мин).
 """
 
 import json
@@ -11,7 +11,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app.api import forecast as api
-from app.forecast import pipeline
+from app.forecast import agent, pipeline
 from app.main import app
 
 client = TestClient(app, raise_server_exceptions=False)
@@ -66,8 +66,37 @@ def fake_cycle(issue_date: str) -> dict:
     }
 
 
+def fake_agent(issue_date: str) -> dict:
+    res = fake_cycle(issue_date)
+    return {
+        "issue_date": issue_date,
+        "issued_at": f"{issue_date}T23:59",
+        "weather_source": res["weather"]["source"],
+        "weather_runs": res["weather"]["runs"],
+        "time_integrity": {"issued_at": f"{issue_date} 23:59:00", "ok": True, "rule": "выпуск до момента прогноза"},
+        "excluded_sources": ["gfs_ws100"],
+        "hours": res["hours"],
+        "summary": res["summary"],
+        "analysis": {"flags": res["flags"], "changed_vs_previous": 0.05, "update": res["update"]},
+        "explanation": "Объяснение планировщика",
+        "mode": "demo",
+        "steps": [
+            {"type": "tool", "name": n, "arguments": "{}", "output": "{}", "ok": True, "ms": 5}
+            for n in (
+                "rank_weather_sources",
+                "fetch_weather",
+                "build_features",
+                "run_forecast",
+                "analyze_forecast",
+                "compare_with_previous",
+            )
+        ],
+    }
+
+
 @pytest.fixture
 def fake(monkeypatch):
+    monkeypatch.setattr(agent, "run", fake_agent)
     monkeypatch.setattr(pipeline, "full_cycle", fake_cycle)
     calls = []
     monkeypatch.setattr(api.cli, "backtest", lambda *a: calls.append(a))
@@ -77,23 +106,16 @@ def fake(monkeypatch):
 # --- /api/forecast ---
 
 
-def test_forecast_maps_cycle_to_contract(fake):
+def test_forecast_returns_agent_result(fake):
     r = client.post("/api/forecast", json={"issue_date": "2026-02-09"})
     assert r.status_code == 200
     f = r.json()
     assert f["issue_date"] == "2026-02-09" and f["issued_at"] == "2026-02-09T23:59"
-    assert f["mode"] == "demo"
+    assert f["mode"] == "demo" and f["explanation"] == "Объяснение планировщика"
     assert len(f["hours"]) == 48 and {h["lead_day"] for h in f["hours"]} == {1, 2}
-    assert f["analysis"] == {"flags": ["Высокая неопределённость"], "changed_vs_previous": 0.05}
-    assert [s["name"] for s in f["steps"]] == [
-        "fetch_weather",
-        "prepare_features",
-        "run_model",
-        "hourly_forecast",
-        "analyze_forecast",
-        "compare_with_previous",
-    ]
-    assert "шаблон без LLM" in f["explanation"]
+    assert f["time_integrity"]["ok"] is True and f["excluded_sources"] == ["gfs_ws100"]
+    assert f["analysis"]["changed_vs_previous"] == 0.05 and f["analysis"]["update"]["day"] == "2026-02-10"
+    assert [s["name"] for s in f["steps"]][:2] == ["rank_weather_sources", "fetch_weather"]
 
 
 @pytest.mark.parametrize("bad", ["2026-03-01", "2026-01-30", "abc"])
@@ -110,7 +132,7 @@ def test_forecast_weather_unavailable_is_503(monkeypatch):
     def boom(_):
         raise httpx.ConnectError("нет сети")
 
-    monkeypatch.setattr(pipeline, "full_cycle", boom)
+    monkeypatch.setattr(agent, "run", boom)
     r = client.post("/api/forecast", json={"issue_date": "2026-02-09"})
     assert r.status_code == 503 and "погоды" in r.json()["detail"]
 
@@ -119,19 +141,47 @@ def test_forecast_internal_error_is_500_without_details(monkeypatch):
     def boom(_):
         raise KeyError("секрет")
 
-    monkeypatch.setattr(pipeline, "full_cycle", boom)
+    monkeypatch.setattr(agent, "run", boom)
     r = client.post("/api/forecast", json={"issue_date": "2026-02-09"})
     assert r.status_code == 500 and "секрет" not in r.text
 
 
-def test_forecast_real_cycle():
-    """Настоящий цикл: выход pipeline проходит схему контракта, 48 часов, интервал упорядочен."""
+def test_forecast_real_agent():
+    """Настоящий агент в DEMO (conftest убирает ключ): полный цикл, шаги с временем, проверка честности по времени."""
     r = client.post("/api/forecast", json={"issue_date": "2026-02-09"})
     assert r.status_code == 200, r.text
     f = r.json()
+    assert f["mode"] == "demo"
     assert len(f["hours"]) == 48
     assert all(0 <= h["p10"] <= h["p50"] <= h["p90"] <= 1 for h in f["hours"])
     assert f["hours"][0]["time"] == "2026-02-10T00:00" and f["hours"][-1]["time"] == "2026-02-11T23:00"
+    assert f["time_integrity"]["ok"] is True
+    names = [s["name"] for s in f["steps"] if s["type"] == "tool"]
+    assert {"fetch_weather", "run_forecast", "analyze_forecast", "compare_with_previous"} <= set(names)
+    assert all(s["ms"] >= 0 for s in f["steps"]) and f["explanation"]
+
+
+# --- прогрев и /health ---
+
+
+def test_warm_up_states(monkeypatch):
+    monkeypatch.setattr(api, "warm", {"state": "cold"})
+    monkeypatch.setattr(api.model, "get_forecaster", lambda: None)
+    monkeypatch.setattr(api.calibrate, "load", lambda: {})
+    api.warm_up()
+    assert api.warm["state"] == "ready"
+    assert client.get("/health").json()["model"] == "ready"
+
+
+def test_warm_up_failure_is_reported(monkeypatch):
+    def boom():
+        raise RuntimeError("нет данных")
+
+    monkeypatch.setattr(api, "warm", {"state": "cold"})
+    monkeypatch.setattr(api.model, "get_forecaster", boom)
+    api.warm_up()
+    assert api.warm["state"] == "error"
+    assert client.get("/health").json() == {**client.get("/health").json(), "status": "ok", "model": "error"}
 
 
 # --- /api/backtest ---

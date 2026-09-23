@@ -14,10 +14,12 @@ COPY backend/requirements.txt backend/requirements.txt
 RUN pip install --no-cache-dir -r backend/requirements.txt
 COPY backend/ backend/
 COPY data/ data/
+# готовые результаты: метрики, калибровка интервала, прогнозы февраля (без них /api/metrics считает метрики минутами)
+COPY outputs/ outputs/
 COPY --from=frontend /frontend/dist frontend/dist
 ARG BUILD_COMMIT=dev
 ENV BUILD_COMMIT=${BUILD_COMMIT}
-RUN useradd --create-home --uid 1000 app && chown -R app /app/data
+RUN useradd --create-home --uid 1000 app && chown -R app /app/data /app/outputs
 USER app
 WORKDIR /app/backend
 EXPOSE 8000

@@ -1,6 +1,6 @@
 """Pydantic-схемы запросов и ответов API (основа docs/api-contract.md)."""
 
-from typing import Literal
+from typing import Any, Literal
 
 from pydantic import BaseModel
 
@@ -9,6 +9,7 @@ class Health(BaseModel):
     status: str
     mode: str
     commit: str
+    model: str = "cold"  # прогрев модели прогноза: cold | warming | ready | error
 
 
 # --- прогноз ВЭС (docs/api-contract.md) ---
@@ -34,6 +35,8 @@ class AgentStep(BaseModel):
     output: str | None = None
     ok: bool | None = None
     content: str | None = None
+    tool_calls: list[str] | None = None  # шаг модели (LIVE): какие инструменты она вызвала
+    source: str | None = None  # шаг модели: live | cache
     ms: int
 
 
@@ -48,6 +51,7 @@ class ForecastSummary(BaseModel):
 class ForecastAnalysis(BaseModel):
     flags: list[str]
     changed_vs_previous: float | None = None  # средний |Δp50| по суткам D+1 против прошлого выпуска
+    update: dict[str, Any] | None = None  # детали пересчёта: прошлый выпуск, сутки, изменение энергии
 
 
 class Forecast(BaseModel):
@@ -55,11 +59,13 @@ class Forecast(BaseModel):
     issued_at: str
     weather_source: str
     weather_runs: str
+    time_integrity: dict[str, Any] | None = None  # проверка «погода выпущена до момента прогноза»: ok, правило, выпуски
+    excluded_sources: list[str] = []  # источники погоды, которые агент исключил
     hours: list[HourPoint]
     summary: ForecastSummary
     analysis: ForecastAnalysis
     explanation: str
-    mode: Literal["live", "demo"]  # live — решения принимала LLM; demo — детерминированный цикл
+    mode: Literal["live", "demo"]  # live — решения принимала LLM; demo — детерминированный планировщик
     steps: list[AgentStep]
 
 
