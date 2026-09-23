@@ -10,6 +10,7 @@ import json
 from functools import lru_cache
 
 import httpx
+import numpy as np
 import pandas as pd
 
 from app.config import ROOT_DIR
@@ -21,7 +22,8 @@ VARS = ["wind_speed_10m", "wind_speed_100m", "wind_direction_100m", "wind_gusts_
 CACHE = ROOT_DIR / "data" / "weather" / "previous_runs.json"
 START, END = "2024-01-01", "2026-03-02"
 DAYS = (1, 2, 3)
-PUBLISH_DELAY_H = 7  # выпуск NWP-модели доступен примерно через 4–7 ч после срока; берём консервативно 7 ч
+PUBLISH_DELAY_H = 7
+ONLINE = __import__("os").getenv("WEATHER_ONLINE", "1") != "0"  # 0 — только локальный архив  # выпуск NWP-модели доступен примерно через 4–7 ч после срока; берём консервативно 7 ч
 # Отдельные модели погоды — ансамбль (проверено 23.09.2026: архив выпусков за 1–2 суток есть для точки станции).
 # У JMA, CMA и GEM в архиве только ветер на 10 м.
 FULL = ["wind_speed_100m", "wind_speed_10m", "wind_direction_100m", "wind_gusts_10m", "temperature_2m"]
@@ -109,3 +111,55 @@ def for_lead(lead: int) -> pd.DataFrame:
     df = load()
     cols = [f"{v}_d{lead}" for v in VARS]
     return df[cols].rename(columns=dict(zip(cols, VARS, strict=True)))
+
+
+def _source_vars(model: str | None) -> list[str]:
+    return VARS if model is None else ENSEMBLE[model]
+
+
+def fetch_window(start: str, end: str, timeout: float = 8.0) -> dict:
+    """Агент САМ получает архивные прогнозы по координатам станции на окно выпуска (7 источников, выпуски за 1–3 суток).
+    Полученные значения подставляются в рабочие таблицы погоды — модель считает по ним. Нет сети или источник не ответил —
+    для этого источника остаётся локальный архив data/weather/ (с пометкой). Возвращает снимок: откуда данные, хеш
+    сырых ответов и совпадение с архивом (прошлые выпуски NWP не меняются — расхождение означает обновление входа)."""
+    import hashlib
+
+    report = {"window": [start, end], "sources": [], "network_ok": 0, "archive_fallback": 0}
+    digest = hashlib.sha256()
+    for m in [None, *ENSEMBLE]:
+        name = m or "best_match"
+        variables = _source_vars(m)
+        params = {
+            "latitude": STATION[0], "longitude": STATION[1],
+            "hourly": ",".join(f"{v}_previous_day{d}" for v in variables for d in DAYS),
+            "start_date": start, "end_date": end, "timezone": "Asia/Almaty", "wind_speed_unit": "ms",
+        }
+        if m is not None:
+            params["models"] = m
+        try:
+            resp = httpx.get(URL, params=params, timeout=timeout)
+            resp.raise_for_status()
+            raw = resp.json()["hourly"]
+        except Exception as exc:  # сеть, лимиты, таймаут — не роняем агента
+            report["archive_fallback"] += 1
+            report["sources"].append({"source": name, "origin": "archive", "reason": type(exc).__name__})
+            continue
+        fresh = pd.DataFrame(raw)
+        fresh["time"] = pd.to_datetime(fresh["time"])
+        fresh = fresh.set_index("time")
+        table = load() if m is None else load_model(m)
+        cols = list(fresh.columns)
+        target = [c.replace("_previous_day", "_d") for c in cols] if m is None else cols
+        old = table.reindex(fresh.index)[target].to_numpy(dtype=float)
+        new = fresh[cols].to_numpy(dtype=float)
+        diff = float(np.nanmax(np.abs(old - new))) if np.isfinite(old - new).any() else 0.0
+        table.loc[fresh.index, target] = new  # модель дальше считает по полученным сейчас данным
+        digest.update(json.dumps(raw, sort_keys=True).encode())
+        report["network_ok"] += 1
+        report["sources"].append({"source": name, "origin": "network", "hours": len(fresh),
+                                  "max_abs_diff_vs_archive": round(diff, 3), "updated": bool(diff > 1e-6)})
+    report["snapshot_hash"] = digest.hexdigest()[:16] if report["network_ok"] else None
+    report["origin"] = ("network" if report["archive_fallback"] == 0 else
+                        "mixed" if report["network_ok"] else "archive")
+    report["input_updated"] = any(s.get("updated") for s in report["sources"])
+    return report

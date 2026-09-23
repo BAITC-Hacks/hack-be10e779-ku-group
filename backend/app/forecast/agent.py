@@ -59,7 +59,16 @@ def fetch_weather(a: FetchArgs) -> dict:
     pipeline.check_issue_date(a.issue_date)
     st = _st(a.issue_date)
     st["exclude"] = sorted(set(a.exclude_sources))
+    _, d1, d2 = pipeline.issue_window(a.issue_date)
+    # агент сам запрашивает прогнозы по координатам станции на окно выпуска (офлайн — локальный архив)
+    live = weather.fetch_window(str(d1[0].date()), str(d2[-1].date())) if weather.ONLINE else \
+        {"origin": "archive", "network_ok": 0, "archive_fallback": 7, "input_updated": False, "snapshot_hash": None,
+         "sources": [], "reason": "WEATHER_ONLINE=0"}
+    st["live_weather"] = live
     info = pipeline.get_weather(a.issue_date)
+    info["retrieval"] = {k: live[k] for k in ("origin", "network_ok", "archive_fallback", "input_updated",
+                                              "snapshot_hash")}
+    info["retrieval"]["sources"] = live["sources"]
     issue_end = model.issue_moment(pd.Timestamp(a.issue_date))
     leads = pipeline.window_leads(a.issue_date)
     delay = pd.Timedelta(hours=weather.PUBLISH_DELAY_H)
@@ -273,6 +282,7 @@ def run(issue_date: str, planner_only: bool = False) -> dict:
         "analysis": {"flags": st["analysis"]["flags"], "changed_vs_previous": st["update"]["mean_abs_change"],
                      "update": st["update"]},
         "validation": st["validation"],
+        "weather_retrieval": st["weather"].get("retrieval"),
         "cards": passport.cards(st["hours"], st["update"], st["weather"], st["exclude"]),
         "explanation": explanation,
         "mode": mode,
@@ -289,3 +299,44 @@ def history(start: str, end: str) -> list[dict]:
     return [{"time": t.strftime("%Y-%m-%dT%H:%M"),
              "actual": None if pd.isna(r.power) else round(float(r.power), 4),
              "wind_measured": None if pd.isna(r.wind) else round(float(r.wind), 2)} for t, r in h.iterrows()]
+
+
+def autonomous_run(start: str = "2026-01-31", end: str = "2026-02-27", use_llm: bool = False) -> dict:
+    """Процесс ТЗ «как если бы прогноз выполнялся в прошлом»: агент идёт по дням выпуска. На каждом шаге он сам получает
+    погоду, проверяет, обновились ли входные данные для уже прогнозированных часов (для завтрашних часов вышел более
+    свежий выпуск NWP, чем вчера), и при обновлении пересчитывает прогноз, сохраняет новую версию и оценивает пересмотр."""
+    events = []
+    t_all = time.monotonic()
+    for d in pd.date_range(start, end, freq="1D"):
+        issue = d.strftime("%Y-%m-%d")
+        t0 = time.monotonic()
+        prev = passport.latest(str((d - pd.Timedelta(days=1)).date()))
+        cur_leads = pipeline.window_leads(issue)
+        fresher = []
+        if prev:
+            old = {h["time"]: h.get("weather_run_days") for h in prev["forecast"]["hours"]}
+            for h, n in cur_leads.items():
+                k = h.strftime("%Y-%m-%dT%H:%M")
+                if k in old and old[k] is not None and int(n) < int(old[k]):
+                    fresher.append(k)
+        decision = ("первый выпуск — прогноз на 48 ч" if not prev else
+                    f"входные данные обновились: для {len(fresher)} ч вышел более свежий выпуск погоды → пересчёт"
+                    if fresher else "входные данные не изменились → пересчёт не требуется, версия сохраняется")
+        res = run(issue, planner_only=not use_llm)
+        upd = res["analysis"]["update"]
+        events.append({
+            "issue_date": issue,
+            "decision": decision,
+            "hours_with_fresher_weather": len(fresher),
+            "weather_origin": res["weather_retrieval"]["origin"] if res.get("weather_retrieval") else None,
+            "forecast_id": res["passport"]["forecast_id"],
+            "energy_d1": res["summary"]["energy_d1"],
+            "revision": {k: upd.get(k) for k in ("previous_issue", "common_hours", "mean_abs_change",
+                                                    "hours_changed_10pp", "method")},
+            "cards": [c["kind"] for c in res["cards"]],
+            "validation_ok": res["validation"]["ok"],
+            "mode": res["mode"],
+            "ms": round((time.monotonic() - t0) * 1000),
+        })
+    return {"start": start, "end": end, "runs": len(events), "ms": round((time.monotonic() - t_all) * 1000),
+            "events": events}

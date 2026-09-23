@@ -333,3 +333,47 @@ def holdout(issue_date: str = Query("2026-01-20")) -> Holdout:
             else None,
         },
     )
+
+
+# ---------- автономный прогон агента «как в прошлом» (ТЗ, п. 4 и ретроспектива) ----------
+_auto = {"status": "idle", "done": 0, "total": 0, "events": [], "error": None, "started_at": None}
+_auto_lock = threading.Lock()
+
+
+def _auto_worker(start: str, end: str, use_llm: bool) -> None:
+    try:
+        for d in pd.date_range(start, end, freq="1D"):
+            day = d.strftime("%Y-%m-%d")
+            res = agent.autonomous_run(day, day, use_llm=use_llm)
+            _auto["events"].extend(res["events"])
+            _auto["done"] += 1
+        _auto["status"] = "done"
+    except Exception as exc:  # не роняем сервер; причина видна в GET
+        log.exception("autonomous run failed")
+        _auto["status"], _auto["error"] = "error", f"{type(exc).__name__}: {exc}"[:300]
+    finally:
+        _auto_lock.release()
+
+
+@router.post("/autonomous-run")
+def start_autonomous_run(body: dict | None = None) -> dict:
+    """Запустить в фоне автономный прогон агента по дням выпуска (по умолчанию 31.01–27.02). Прогресс — GET."""
+    body = body or {}
+    start, end = body.get("start", "2026-01-31"), body.get("end", "2026-02-27")
+    try:
+        pipeline.check_issue_date(start)
+        pipeline.check_issue_date(end)
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
+    if not _auto_lock.acquire(blocking=False):
+        raise HTTPException(409, "Автономный прогон уже идёт")
+    use_llm = bool(body.get("use_llm", False)) and LLMClient().mode == "live"
+    _auto.update(status="running", done=0, total=len(pd.date_range(start, end, freq="1D")), events=[], error=None,
+                 started_at=datetime.now().isoformat(timespec="seconds"), use_llm=use_llm)
+    threading.Thread(target=_auto_worker, args=(start, end, use_llm), daemon=True).start()
+    return {k: _auto[k] for k in ("status", "done", "total", "started_at")}
+
+
+@router.get("/autonomous-run")
+def autonomous_run_status() -> dict:
+    return dict(_auto)
