@@ -4,7 +4,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Play, Wind } from 'lucide-react'
 import { ApiError } from '../../api/client'
-import { getForecast, postForecast } from '../../api/endpoints'
+import { getForecast, getForecastProgress, postForecast } from '../../api/endpoints'
+import type { AgentStep } from '../../api/types'
 import type { Forecast } from '../../api/types'
 import type { ForecastTabProps } from '../../app/shared'
 import { Badge, Empty, Notice, Skeleton, Spinner } from '../../components/ui'
@@ -83,6 +84,26 @@ export default function ForecastTab(props: ForecastTabProps) {
     return () => window.clearTimeout(id)
   }, [reveal, cache])
 
+  // живой прогресс: пока идёт прогноз, раз в 500 мс забираем завершённые шаги агента
+  const [liveSteps, setLiveSteps] = useState<AgentStep[]>([])
+  const runningDate = running?.date ?? null
+  useEffect(() => {
+    if (!runningDate) return
+    setLiveSteps([])
+    let alive = true
+    const tick = () =>
+      getForecastProgress(runningDate)
+        .then((p) => alive && setLiveSteps(p.steps))
+        .catch(() => {
+          /* прогресс не критичен — итог придёт в ответе */
+        })
+    const id = window.setInterval(tick, 500)
+    return () => {
+      alive = false
+      window.clearInterval(id)
+    }
+  }, [runningDate])
+
   const run = useCallback(async () => {
     if (running) return
     const d = issueDate
@@ -93,7 +114,8 @@ export default function ForecastTab(props: ForecastTabProps) {
       const f = await postForecast(d)
       setCache((c) => ({ ...c, [d]: f }))
       setRequestMs((m) => ({ ...m, [d]: Date.now() - t0 }))
-      setReveal(!reducedMotion && f.steps.length > 1 ? { date: d, shown: 1 } : null)
+      // шаги уже показаны по ходу работы — повторное проигрывание не нужно
+      setReveal(null)
     } catch (e) {
       setErrors((x) => ({ ...x, [d]: errorText(e) }))
     } finally {
@@ -222,6 +244,7 @@ export default function ForecastTab(props: ForecastTabProps) {
         <AgentLog
           f={f}
           visibleSteps={visibleSteps}
+          liveSteps={liveSteps}
           replaying={replaying}
           running={runningHere}
           elapsed={elapsed}

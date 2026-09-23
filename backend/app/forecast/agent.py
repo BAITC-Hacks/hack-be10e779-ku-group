@@ -10,6 +10,7 @@
 """
 
 import json
+import threading
 import time
 
 import pandas as pd
@@ -189,6 +190,37 @@ def compare_with_previous(a: IssueArgs) -> dict:
 TOOLS = [rank_weather_sources, fetch_weather, build_features, run_forecast, validate_forecast, analyze_forecast,
          compare_with_previous]
 
+# Прогресс текущего запуска для интерфейса: шаги пишутся в момент завершения инструмента,
+# фронт опрашивает GET /api/forecast/progress/{date} и ставит галочки по мере работы агента.
+_progress: dict[str, list[dict]] = {}
+_local = threading.local()  # дата выпуска, которую считает этот поток (прогноз и автономный прогон — разные потоки)
+
+
+def _track(t) -> None:
+    fn = t.fn
+
+    def wrapped(args):
+        t0, ok = time.monotonic(), False
+        try:
+            out = fn(args)
+            ok = not (isinstance(out, dict) and "error" in out)
+            return out
+        finally:
+            d = getattr(_local, "issue", None)
+            if d:
+                _progress.setdefault(d, []).append(
+                    {"type": "tool", "name": t.name, "ok": ok, "ms": round((time.monotonic() - t0) * 1000)})
+
+    t.fn = wrapped
+
+
+for _t in TOOLS:
+    _track(_t)
+
+
+def progress(issue_date: str) -> list[dict]:
+    return list(_progress.get(issue_date, []))
+
 SYSTEM = """Ты — агент прогноза выработки ветроэлектростанции (2 турбины, Алматинская обл.) для диспетчера.
 Выполни полный цикл через инструменты, для даты выпуска из запроса:
 1) rank_weather_sources — оцени источники погоды; 2) fetch_weather — получи архивный прогноз; если у источника есть пропуски
@@ -244,6 +276,8 @@ def run(issue_date: str, planner_only: bool = False) -> dict:
     `planner_only` — без LLM (ретроспективный прогон февраля: 28 выпусков не тратят кредиты и воспроизводимы)."""
     pipeline.check_issue_date(issue_date)
     _state.pop(issue_date, None)
+    _local.issue = issue_date
+    _progress[issue_date] = []
     llm = LLMClient()
     mode = "demo" if planner_only else llm.mode
     explanation, steps = "", []

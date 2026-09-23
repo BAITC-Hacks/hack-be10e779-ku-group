@@ -15,6 +15,7 @@ type LogState = 'idle' | 'running' | 'ready'
 export function AgentLog(props: {
   f: Forecast | null
   visibleSteps: AgentStep[] // шаги, уже «проигранные» анимацией
+  liveSteps?: AgentStep[] // шаги, завершённые во время текущего прогона (GET /api/forecast/progress)
   replaying: boolean
   running: boolean
   elapsed: number
@@ -26,7 +27,7 @@ export function AgentLog(props: {
   const { t } = useT()
   const { f, visibleSteps, running } = props
   const state: LogState = running ? 'running' : f ? 'ready' : 'idle'
-  const steps = state === 'ready' ? visibleSteps : []
+  const steps = state === 'ready' ? visibleSteps : state === 'running' ? (props.liveSteps ?? []) : []
   const total = f?.steps ?? []
   const sumMs = total.reduce((a, s) => a + (s.ms || 0), 0)
 
@@ -119,8 +120,11 @@ function Stepper(props: { steps: AgentStep[]; running: boolean }) {
   const { t } = useT()
   return (
     <ol className="fc-stepper" aria-label={t('forecast.log.stagesAria')}>
-      {STAGES.map((stage) => {
-        const st = props.running ? 'running' : stageStatus(props.steps, stage)
+      {STAGES.map((stage, i) => {
+        const done = stageStatus(props.steps, stage)
+        // во время прогона: пройденные этапы — галочка, первый непройденный — «идёт», остальные ждут
+        const firstPending = STAGES.findIndex((s) => stageStatus(props.steps, s) === 'pending')
+        const st = props.running && done === 'pending' ? (i === firstPending ? 'running' : 'pending') : done
         const stageMs = props.steps
           .filter((s) => s.type === 'tool' && (toolInfo(s.name).stage === stage || (stage === 'Прогноз' && s.name === 'run_forecast')))
           .reduce((a, s) => a + (s.ms || 0), 0)

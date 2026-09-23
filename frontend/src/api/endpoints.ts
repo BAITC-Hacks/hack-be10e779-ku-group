@@ -2,7 +2,7 @@
 // на 404/405 — экраны показывают понятное состояние вместо ошибки.
 
 import { api, ApiError } from './client'
-import type { AutonomousRun, Backtest, Forecast, Health, HistoryPoint, HoldoutPoint, Meta, Metrics } from './types'
+import type { AgentStep, AutonomousRun, Backtest, Forecast, Health, HistoryPoint, HoldoutPoint, Meta, Metrics } from './types'
 import { DEFAULT_META } from '../lib/constants'
 
 async function orNull<T>(p: Promise<T>): Promise<T | null> {
@@ -39,6 +39,10 @@ export const postForecast = (issue_date: string) =>
   api<Forecast>('/api/forecast', { method: 'POST', body: JSON.stringify({ issue_date }) }).then(withFallback)
 
 /** Сохранённый прогноз; null — на эту дату ещё не считали (или эндпоинта пока нет). */
+/** Шаги агента, завершённые к этому моменту: опрашивать во время прогноза, чтобы этапы отмечались по ходу. */
+export const getForecastProgress = (issue_date: string) =>
+  api<{ issue_date: string; steps: AgentStep[] }>(`/api/forecast/progress/${encodeURIComponent(issue_date)}`)
+
 export const getForecast = (issue_date: string) =>
   orNull(api<Forecast>(`/api/forecast/${encodeURIComponent(issue_date)}`)).then((f) => (f ? withFallback(f) : f))
 

@@ -123,6 +123,12 @@ def forecast(body: ForecastIn, _user: dict = Depends(require("dispatcher"))) -> 
     return Forecast(**res, computed_at=(res.get("passport") or {}).get("created_at"))
 
 
+@router.get("/forecast/progress/{issue_date}")
+def forecast_progress(issue_date: str) -> dict:
+    """Шаги агента, завершённые к этому моменту в текущем (или последнем) запуске на эту дату."""
+    return {"issue_date": issue_date, "steps": agent.progress(issue_date)}
+
+
 @router.get("/forecast/{issue_date}", response_model=Forecast)
 def saved_forecast(issue_date: str) -> Forecast:
     """Последняя сохранённая версия выпуска любого режима (в т. ч. LIVE) — без пересчёта; режим — в passport."""
