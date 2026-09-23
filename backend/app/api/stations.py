@@ -146,7 +146,8 @@ async def upload_history(turbine_id: int, file: UploadFile = File(...), db: Sess
     df.to_csv(path, index=False)
     t.history_rows, t.history_start, t.history_end = len(df), str(df["time"].min()), str(df["time"].max())
     t.history_file = str(path.relative_to(ROOT_DIR)) if path.is_relative_to(ROOT_DIR) else path.name
-    st.model_status = "история загружена — обучение модели для этой станции не выполнялось в этой версии"
+    st.model_status = ("история сохранена одним файлом; модель станции строится при загрузке через "
+                       "/history/months (вкладка «Станции»)")
     db.commit()
     return {"turbine_id": t.id, "rows": len(df), "period": [t.history_start, t.history_end],
             "step": str(step.iloc[0]) if len(step) else None, "rows_bad_time": bad_time,
