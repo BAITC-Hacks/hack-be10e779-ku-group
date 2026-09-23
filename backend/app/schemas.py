@@ -10,6 +10,7 @@ class Health(BaseModel):
     mode: str
     commit: str
     model: str = "cold"  # прогрев модели прогноза: cold | warming | ready | error
+    llm_model: str = ""  # имя LLM для бейджа LIVE
 
 
 # --- прогноз ВЭС (docs/api-contract.md) ---

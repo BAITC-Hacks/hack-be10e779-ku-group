@@ -66,9 +66,9 @@ def fetch_weather(a: FetchArgs) -> dict:
     runs = pd.Series([h - pd.Timedelta(days=int(n)) for h, n in leads.items()])
     latest_published = runs.max() + delay
     info["time_integrity"] = {
-        "issued_at": str(issue_end),
-        "latest_weather_run": str(runs.max()),
-        "latest_run_published_by": str(latest_published),
+        "issued_at": issue_end.strftime("%Y-%m-%dT%H:%M"),
+        "latest_weather_run": runs.max().strftime("%Y-%m-%dT%H:%M"),
+        "latest_run_published_by": latest_published.strftime("%Y-%m-%dT%H:%M"),
         "ok": bool(latest_published <= issue_end),
         "rule": f"для каждого часа — самый свежий выпуск, опубликованный до момента прогноза (задержка публикации "
                 f"{weather.PUBLISH_DELAY_H} ч); фактическая погода не используется",
@@ -199,6 +199,7 @@ def run(issue_date: str, planner_only: bool = False) -> dict:
     llm = LLMClient()
     mode = "demo" if planner_only else llm.mode
     explanation, steps = "", []
+    fallback = False
     if mode == "live":
         try:
             res = run_agent(SYSTEM, f"Сделай прогноз. Дата выпуска: {issue_date}.", TOOLS, llm)
@@ -208,6 +209,7 @@ def run(issue_date: str, planner_only: bool = False) -> dict:
     st = _state.get(issue_date, {})
     if mode == "demo" or "analysis" not in st or "update" not in st:
         if mode == "live":
+            fallback = True
             steps.append({"type": "model", "content": "LLM не завершила цикл — дошёл планировщик", "ms": 0})
         _state.pop(issue_date, None)
         s2, explanation2 = _deterministic(issue_date)
@@ -230,6 +232,7 @@ def run(issue_date: str, planner_only: bool = False) -> dict:
         "cards": passport.cards(st["hours"], st["update"], st["weather"], st["exclude"]),
         "explanation": explanation,
         "mode": mode,
+        "fallback": fallback,
         "steps": steps,
     }
     pas = passport.build(issue_date, st["x"], st["hours"], st["weather"], st["exclude"], mode, steps)
