@@ -29,26 +29,35 @@ def test_weather_request_uses_only_previous_runs_columns(monkeypatch, tmp_path):
     for request in captured:
         requested = request["params"]["hourly"].split(",")
         assert requested
-        assert all(name.endswith(("_previous_day1", "_previous_day2")) for name in requested)
-        assert {name.rsplit("_previous_day", 1)[1] for name in requested} == {"1", "2"}
+        assert all(name.rsplit("_previous_day", 1)[1] in {"1", "2", "3"} for name in requested)
+        assert {name.rsplit("_previous_day", 1)[1] for name in requested} == {"1", "2", "3"}
 
 
-def test_prepare_maps_d1_to_lead_1_and_d2_to_lead_2(monkeypatch):
+def test_every_weather_run_used_was_published_before_issue_time():
+    """Для каждого часа выпуск погоды (час − N суток) плюс задержка публикации — не позже момента прогноза,
+    и N минимальный из возможных (берётся самый свежий доступный выпуск)."""
+    for issue in ("2026-01-31", "2026-02-09", "2026-02-27"):
+        leads = pipeline.window_leads(issue)
+        issued_at = pipeline.model.issue_moment(pd.Timestamp(issue))
+        delay = pd.Timedelta(hours=pipeline.weather.PUBLISH_DELAY_H)
+        assert len(leads) == 48
+        for hour, n in leads.items():
+            assert hour - pd.Timedelta(days=int(n)) + delay <= issued_at
+            if n > 1:
+                assert hour - pd.Timedelta(days=int(n) - 1) + delay > issued_at
+
+
+def test_prepare_uses_per_hour_leads(monkeypatch):
     calls = []
 
     def fake_features(index, lead):
-        calls.append((index, lead))
+        calls.append(lead)
         return pd.DataFrame({"lead": lead, "ws100": 5.0}, index=index)
 
     monkeypatch.setattr(pipeline.model, "features", fake_features)
-
     result = pipeline.prepare("2026-02-09")
-
-    assert [(index[0], index[-1], lead) for index, lead in calls] == [
-        (pd.Timestamp("2026-02-10 00:00"), pd.Timestamp("2026-02-10 23:00"), 1),
-        (pd.Timestamp("2026-02-11 00:00"), pd.Timestamp("2026-02-11 23:00"), 2),
-    ]
-    assert result["lead"].tolist() == [1] * 24 + [2] * 24
+    assert sorted(set(calls)) == [1, 2, 3]
+    assert result["lead"].tolist() == pipeline.window_leads("2026-02-09").tolist()
 
 
 def test_forecast_for_february_9_has_48_bounded_ordered_hours():

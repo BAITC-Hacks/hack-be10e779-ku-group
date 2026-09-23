@@ -31,7 +31,7 @@ def _month_predictions(mon: str) -> pd.DataFrame:
     hist = data.load_hourly().loc[start:end]
     parts = []
     for lead in (1, 2):
-        x = model.features(hist.index, lead)
+        x = model.features_at(hist.index, model.horizon_leads(hist.index, lead))
         ok = x["ws100"].notna() & hist["power"].notna()
         p = f.predict(x[ok])
         p["y"] = hist.loc[ok, "power"]

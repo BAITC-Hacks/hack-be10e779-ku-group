@@ -33,26 +33,32 @@ def check_issue_date(issue_date: str) -> pd.Timestamp:
     return d
 
 
+def window_leads(issue_date: str) -> pd.Series:
+    d, d1, d2 = issue_window(issue_date)
+    return model.run_lead(d1.append(d2), model.issue_moment(d))
+
+
 def get_weather(issue_date: str) -> dict:
-    """Шаг 1. Архивный прогноз погоды, доступный в конце дня issue_date: D+1 из выпуска за сутки, D+2 — за двое."""
-    _, d1, d2 = issue_window(issue_date)
-    w1 = weather.for_lead(1).reindex(d1)
-    w2 = weather.for_lead(2).reindex(d2)
-    missing = int(w1["wind_speed_100m"].isna().sum() + w2["wind_speed_100m"].isna().sum())
+    """Шаг 1. Архивный прогноз погоды: для каждого часа — самый свежий выпуск, опубликованный до конца дня issue_date."""
+    leads = window_leads(issue_date)
+    ws = pd.Series([weather.for_lead(int(n))["wind_speed_100m"].get(h) for h, n in leads.items()], index=leads.index)
+    counts = leads.value_counts().sort_index()
     return {
         "source": weather.SOURCE,
-        "runs": f"D+1 — выпуск ≈ за 24 ч до часа, D+2 — ≈ за 48 ч; все выпуски не позже {issue_date} 23:59",
+        "runs": ", ".join(f"выпуск за {n} сут — {c} ч" for n, c in counts.items())
+        + f"; задержка публикации {weather.PUBLISH_DELAY_H} ч; все выпуски опубликованы не позже {issue_date} 23:59",
+        "leads_by_hour": {h.strftime("%Y-%m-%dT%H:%M"): int(n) for h, n in leads.items()},
         "hours": 48,
-        "missing_hours": missing,
-        "wind_100m_mean": round(float(pd.concat([w1, w2])["wind_speed_100m"].mean()), 2),
-        "wind_100m_max": round(float(pd.concat([w1, w2])["wind_speed_100m"].max()), 2),
+        "missing_hours": int(ws.isna().sum()),
+        "wind_100m_mean": round(float(ws.mean()), 2),
+        "wind_100m_max": round(float(ws.max()), 2),
     }
 
 
 def prepare(issue_date: str) -> pd.DataFrame:
     """Шаг 2. Признаки на 48 часов; пропуски погоды заполняются соседними часами (не больше 3 подряд)."""
-    _, d1, d2 = issue_window(issue_date)
-    x = pd.concat([model.features(d1, 1), model.features(d2, 2)])
+    leads = window_leads(issue_date)
+    x = model.features_at(leads.index, leads)
     return x.interpolate(limit=3, limit_direction="both")
 
 
@@ -64,12 +70,14 @@ def run_model(x: pd.DataFrame) -> pd.DataFrame:
 def hourly_forecast(issue_date: str, x: pd.DataFrame, pred: pd.DataFrame) -> list[dict]:
     """Шаг 4. Почасовой прогноз в формате контракта; факт — если он есть в данных."""
     fact = data.load_hourly()["power"]
+    d = pd.Timestamp(issue_date).normalize()
     rows = []
     for t in pred.index:
         a = fact.get(t)
         rows.append({
             "time": t.strftime("%Y-%m-%dT%H:%M"),
-            "lead_day": int(x.at[t, "lead"]),
+            "lead_day": int((t.normalize() - d).days),  # 1 — сутки D+1, 2 — D+2
+            "weather_run_days": int(x.at[t, "lead"]),  # из выпуска за сколько суток взята погода
             "p50": round(float(pred.at[t, "p50"]), 4),
             "p10": round(float(pred.at[t, "p10"]), 4),
             "p90": round(float(pred.at[t, "p90"]), 4),
@@ -120,7 +128,8 @@ def compare_with_previous(issue_date: str, hours: list[dict]) -> dict:
     d = pd.Timestamp(issue_date).normalize()
     prev_issue = (d - pd.Timedelta(days=1)).strftime("%Y-%m-%d")
     _, d1, _ = issue_window(issue_date)
-    x_old = model.features(d1, 2).interpolate(limit=3, limit_direction="both")
+    old_leads = model.run_lead(d1, model.issue_moment(d - pd.Timedelta(days=1)))
+    x_old = model.features_at(d1, old_leads).interpolate(limit=3, limit_direction="both")
     old = run_model(x_old)["p50"]
     new = pd.Series({pd.Timestamp(h["time"]): h["p50"] for h in hours if h["lead_day"] == 1})
     diff = (new - old.reindex(new.index)).abs()

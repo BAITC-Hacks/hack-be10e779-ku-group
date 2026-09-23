@@ -22,6 +22,7 @@ FEATURES = [
     *ENS100, *ENS10, "ens_ws100_mean", "ens_ws100_std", "ens_ws10_mean", "ens_ws10_std",
 ]
 QUANTILES = {"p10": 0.1, "p50": 0.5, "p90": 0.9}
+LEADS = weather.DAYS
 TRAIN_END = pd.Timestamp("2026-01-31 23:00")  # последний час истории из ТЗ
 HOLDOUT = (pd.Timestamp("2026-01-01 00:00"), TRAIN_END)  # январь 2026 — честная отложенная выборка
 
@@ -62,11 +63,43 @@ def features(index: pd.DatetimeIndex, lead: int) -> pd.DataFrame:
     return x
 
 
+def run_lead(hours: pd.DatetimeIndex, issued_at: pd.Timestamp) -> pd.Series:
+    """Какой выпуск погоды брать для каждого часа: минимальный N (сутки), при котором выпуск ≈ (час − 24·N)
+    плюс задержка публикации успел выйти до момента прогноза. Так ни один использованный выпуск не опубликован позже."""
+    delay = pd.Timedelta(hours=weather.PUBLISH_DELAY_H)
+    out = []
+    for h in hours:
+        n = next((n for n in LEADS if h - pd.Timedelta(days=n) + delay <= issued_at), None)
+        if n is None:
+            raise ValueError(f"Нет выпуска погоды, доступного на {issued_at}, для часа {h}")
+        out.append(n)
+    return pd.Series(out, index=hours, name="lead")
+
+
+def issue_moment(day: pd.Timestamp) -> pd.Timestamp:
+    """Прогноз делается в конце дня выпуска (23:59 местного времени)."""
+    return day.normalize() + pd.Timedelta(hours=23, minutes=59)
+
+
+def horizon_leads(index: pd.DatetimeIndex, horizon: int) -> pd.Series:
+    """Для оценки «как в эксплуатации»: час на горизонте D+horizon прогнозировался в конце дня (дата часа − horizon)."""
+    out = pd.Series(0, index=index, dtype=int)
+    for day, idx in pd.Series(index, index=index).groupby(index.normalize()):
+        out.loc[idx.index] = run_lead(idx.index, issue_moment(day - pd.Timedelta(days=horizon))).to_numpy()
+    return out
+
+
+def features_at(index: pd.DatetimeIndex, leads: pd.Series) -> pd.DataFrame:
+    """Признаки, где для каждого часа погода берётся из своего выпуска (lead по часам)."""
+    parts = [features(index[leads.to_numpy() == n], n) for n in sorted(set(leads))]
+    return pd.concat(parts).reindex(index)
+
+
 def training_table(end: pd.Timestamp) -> pd.DataFrame:
     """Пары (признаки, факт) для обоих горизонтов на часы до `end` включительно, где есть и погода, и факт."""
     hist = data.load_hourly().loc[:end]
     parts = []
-    for lead in (1, 2):
+    for lead in LEADS:
         x = features(hist.index, lead)
         parts.append(x.join(hist[["power", "t1_power", "t2_power"]]))
     table = pd.concat(parts)
@@ -144,8 +177,8 @@ def holdout_metrics() -> dict:
         f.models = {q: _gbr(v).fit(t[FEATURES], t["power"]) for q, v in QUANTILES.items()}
         f.curve = power_curve(f.trained_until)
         hist = hourly.loc[start:end]
-        for lead in (1, 2):
-            x = features(hist.index, lead)
+        for lead in (1, 2):  # здесь lead — горизонт D+1 / D+2; выпуск погоды по часам выбирает horizon_leads
+            x = features_at(hist.index, horizon_leads(hist.index, lead))
             ok = x["ws100"].notna() & hist["power"].notna()
             pred = f.predict(x[ok])
             fact = hist.loc[ok, "power"]
@@ -165,7 +198,9 @@ def holdout_metrics() -> dict:
             "lead": f"D+{lead}", "model": name, "hours": int(len(err)),
             "mae": round(float(err.abs().mean()), 4),
             "rmse": round(float(np.sqrt((err ** 2).mean())), 4),
-            "nmae": round(float(err.abs().mean() / fact.mean()), 4),
+            # nMAE в энергетике — ошибка в долях номинала; мощность уже нормирована, поэтому nMAE = MAE
+            "nmae": round(float(err.abs().mean()), 4),
+            "mae_to_mean": round(float(err.abs().mean() / fact.mean()), 4),
         })
     for lead in (1, 2):
         rows.append({"lead": f"D+{lead}", "model": "Покрытие интервала p10–p90 (цель 0.80)",

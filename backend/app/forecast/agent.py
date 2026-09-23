@@ -41,11 +41,11 @@ def rank_weather_sources(a: IssueArgs) -> dict:
     pipeline.check_issue_date(a.issue_date)
     until = min(pd.Timestamp(a.issue_date) + pd.Timedelta(hours=23), LAST_KNOWN)
     skill = calibrate.source_skill(until)
-    _, d1, d2 = pipeline.issue_window(a.issue_date)
-    window = d1.append(d2)
-    gaps = {}
-    for lead, idx in ((1, d1), (2, d2)):
-        ens = weather.ensemble_for_lead(lead).reindex(idx)
+    leads = pipeline.window_leads(a.issue_date)
+    window = leads.index
+    gaps: dict[str, int] = {}
+    for n in sorted(set(leads)):
+        ens = weather.ensemble_for_lead(int(n)).reindex(window[leads.to_numpy() == n])
         for c in ens.columns:
             gaps[c] = gaps.get(c, 0) + int(ens[c].isna().sum())
     for r in skill:
@@ -60,15 +60,18 @@ def fetch_weather(a: FetchArgs) -> dict:
     st = _st(a.issue_date)
     st["exclude"] = sorted(set(a.exclude_sources))
     info = pipeline.get_weather(a.issue_date)
-    issue_end = pd.Timestamp(a.issue_date) + pd.Timedelta(hours=23, minutes=59)
-    _, d1, d2 = pipeline.issue_window(a.issue_date)
-    # выпуск для часа h ≈ h − 24 ч (day1) или h − 48 ч (day2); самый поздний должен быть не позже конца дня выпуска
-    latest_run = max(d1.max() - pd.Timedelta(hours=24), d2.max() - pd.Timedelta(hours=48))
+    issue_end = model.issue_moment(pd.Timestamp(a.issue_date))
+    leads = pipeline.window_leads(a.issue_date)
+    delay = pd.Timedelta(hours=weather.PUBLISH_DELAY_H)
+    runs = pd.Series([h - pd.Timedelta(days=int(n)) for h, n in leads.items()])
+    latest_published = runs.max() + delay
     info["time_integrity"] = {
         "issued_at": str(issue_end),
-        "latest_weather_run_used": str(latest_run),
-        "ok": bool(latest_run <= issue_end),
-        "rule": "D+1 ← выпуск за 24 ч до часа, D+2 ← за 48 ч; фактическая погода не используется",
+        "latest_weather_run": str(runs.max()),
+        "latest_run_published_by": str(latest_published),
+        "ok": bool(latest_published <= issue_end),
+        "rule": f"для каждого часа — самый свежий выпуск, опубликованный до момента прогноза (задержка публикации "
+                f"{weather.PUBLISH_DELAY_H} ч); фактическая погода не используется",
     }
     info["excluded_sources"] = st["exclude"]
     st["weather"] = info

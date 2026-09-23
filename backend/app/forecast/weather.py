@@ -1,8 +1,8 @@
 """Архивные прогнозы погоды из открытого источника: Open-Meteo Previous Runs API (CC BY 4.0, без ключа).
 
-`<var>_previous_day1` — значение на час h из выпуска модели примерно за 24 ч до h; `_previous_day2` — за 48 ч.
-Прогноз делается в конце дня D (см. CASE.md, A4): для суток D+1 берём day1, для D+2 — day2 — оба выпуска сделаны
-не позже конца дня D, то есть были доступны на момент прогноза. Фактическую погоду не используем нигде.
+`<var>_previous_dayN` — значение на час h из выпуска модели примерно за N·24 ч до h (N = 1, 2, 3).
+Выпуск модели публикуется не сразу: учитываем задержку публикации PUBLISH_DELAY_H. Для каждого часа прогноза берётся
+самый свежий выпуск, опубликованный не позже момента прогноза (правило — model.run_lead). Фактическую погоду не используем.
 Ответ сохраняется в data/weather/, чтобы проект работал без интернета; `refresh=True` скачивает заново.
 """
 
@@ -20,6 +20,8 @@ SOURCE = "Open-Meteo Previous Runs API (best_match)"
 VARS = ["wind_speed_10m", "wind_speed_100m", "wind_direction_100m", "wind_gusts_10m", "temperature_2m"]
 CACHE = ROOT_DIR / "data" / "weather" / "previous_runs.json"
 START, END = "2024-01-01", "2026-03-02"
+DAYS = (1, 2, 3)
+PUBLISH_DELAY_H = 7  # выпуск NWP-модели доступен примерно через 4–7 ч после срока; берём консервативно 7 ч
 # Отдельные модели погоды — ансамбль (проверено 23.09.2026: архив выпусков за 1–2 суток есть для точки станции).
 # У JMA, CMA и GEM в архиве только ветер на 10 м.
 FULL = ["wind_speed_100m", "wind_speed_10m", "wind_direction_100m", "wind_gusts_10m", "temperature_2m"]
@@ -47,7 +49,7 @@ def fetch(refresh: bool = False, model: str | None = None) -> dict:
     params = {
         "latitude": STATION[0],
         "longitude": STATION[1],
-        "hourly": ",".join(f"{v}_previous_day{d}" for v in variables for d in (1, 2)),
+        "hourly": ",".join(f"{v}_previous_day{d}" for v in variables for d in DAYS),
         "start_date": START,
         "end_date": END,
         "timezone": "Asia/Almaty",
