@@ -105,7 +105,7 @@ export default function AboutModal(props: AboutModalProps) {
       <div className="ab-dialog" role="dialog" aria-modal="true" aria-labelledby="ab-title" aria-describedby="ab-lead" ref={dialogRef}>
         <header className="ab-head">
           <div>
-            <div className="eyebrow">Ветер·Прогноз</div>
+            <div className="eyebrow">Анемо</div>
             <h2 id="ab-title" className="ab-title">
               О системе
             </h2>

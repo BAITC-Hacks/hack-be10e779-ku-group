@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useState } from 'react'
-import { Info, Moon, Sun, Wind } from 'lucide-react'
+import { Info, Moon, Sun } from 'lucide-react'
 import { getHealth, getMeta, getMetrics } from './api/endpoints'
 import type { Health, Meta, Metrics } from './api/types'
 import type { Theme } from './app/shared'
 import { Badge, Notice, Spinner } from './components/ui'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import { SiteFooter } from './components/SiteFooter'
+import { BrandMark } from './components/BrandMark'
 import { DEFAULT_ISSUE_DATE, DEFAULT_META } from './lib/constants'
 import { num } from './lib/format'
 import ForecastTab from './features/forecast/ForecastTab'
@@ -99,10 +100,10 @@ export default function App() {
       <header className="topbar">
         <div className="brand">
           <span className="brand-mark" aria-hidden>
-            <Wind size={20} />
+            <BrandMark size={26} />
           </span>
           <div>
-            <div className="brand-name">Ветер·Прогноз</div>
+            <div className="brand-name">Анемо</div>
             <div className="brand-sub">
               {meta.station.name} · время станции UTC+5
             </div>
