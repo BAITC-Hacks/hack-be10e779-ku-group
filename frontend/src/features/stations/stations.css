@@ -1,0 +1,43 @@
+/* Вкладка «Станции». Только токены из index.css, префикс st-. */
+
+.st { display: grid; gap: 16px; }
+.st-head { display: grid; gap: 4px; }
+.st-title { margin: 0; font-size: 20px; font-weight: 600; letter-spacing: -0.01em; }
+.st-intro { margin: 0; font-size: 13px; max-width: 88ch; }
+
+/* ---------- формы ---------- */
+.st-form { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px; }
+.st-form + .notice { margin-top: 12px; }
+.st-form-sub { margin-top: 16px; padding-top: 12px; border-top: 1px dashed var(--border); }
+.st-form-label { flex-basis: 100%; }
+.st-form-sub .notice { flex-basis: 100%; }
+.st-field { display: grid; gap: 4px; font-size: 12px; color: var(--text-2); flex: 1 1 120px; min-width: 0; }
+.st-field-wide { flex: 2 1 200px; }
+.st-input {
+  height: 36px; padding: 0 10px; border-radius: var(--radius-sm);
+  border: 1px solid var(--border-strong); background: var(--surface-2); color: var(--text); min-width: 0;
+}
+.st-input:focus-visible { outline: 2px solid var(--primary); outline-offset: 1px; }
+
+/* ---------- карточка станции ---------- */
+.st-card-title { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.st-meta { margin: 0 0 12px; font-size: 13px; font-variant-numeric: tabular-nums; }
+.st-empty { margin: 0; font-size: 13px; }
+.st-turbines { display: grid; gap: 10px; }
+.st-turbine {
+  display: grid; gap: 8px; padding: 10px 12px; border-radius: var(--radius-sm);
+  background: var(--surface-2); border: 1px solid var(--border);
+}
+.st-turbine-info { display: flex; flex-wrap: wrap; gap: 4px 16px; font-size: 13px; font-variant-numeric: tabular-nums; }
+.st-upload { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 13px; }
+.st-upload input[type='file'] { max-width: 100%; color: var(--text-2); }
+.st-files { margin: 4px 0; padding-left: 18px; font-size: 13px; }
+
+/* ---------- графики и прогноз ---------- */
+.st-chart { margin-top: 16px; }
+.st-chart-cap { font-size: 12px; margin-bottom: 4px; }
+.st-forecast { display: grid; gap: 10px; margin-top: 16px; justify-items: start; }
+.st-forecast > div { width: 100%; }
+.st-forecast .notice { width: 100%; }
+.st-summary { margin: 0; font-size: 14px; }
+.st-note { margin: 0; font-size: 12px; }

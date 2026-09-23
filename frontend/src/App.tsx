@@ -19,6 +19,7 @@ import FebruaryTab from './features/february/FebruaryTab'
 import QualityTab from './features/quality/QualityTab'
 import AboutModal from './features/about/AboutModal'
 import ProjectTab from './features/project/ProjectTab'
+import StationsTab from './features/stations/StationsTab'
 import './App.css'
 
 type Tab = TabId
@@ -26,6 +27,7 @@ const TABS: { id: Tab; label: TKey }[] = [
   { id: 'forecast', label: 'app.tabs.forecast' },
   { id: 'february', label: 'app.tabs.february' },
   { id: 'quality', label: 'app.tabs.quality' },
+  { id: 'stations', label: 'app.tabs.stations' },
   { id: 'project', label: 'app.tabs.project' },
 ]
 
@@ -224,6 +226,11 @@ export default function App() {
               metricsError={metricsError}
               onReload={loadMetrics}
             />
+          </ErrorBoundary>
+        </div>
+        <div hidden={tab !== 'stations'}>
+          <ErrorBoundary name={t('app.tabs.stations')}>
+            <StationsTab theme={theme} />
           </ErrorBoundary>
         </div>
         <div hidden={tab !== 'project'}>

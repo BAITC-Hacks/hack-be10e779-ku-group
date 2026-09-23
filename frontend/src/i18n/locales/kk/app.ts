@@ -8,6 +8,7 @@ const kk: Dict<typeof ru> = {
     forecast: 'Болжам',
     february: 'Кезеңге болжам',
     quality: 'Модель сапасы',
+    stations: 'Станциялар',
     project: 'Жоба туралы',
   },
   headline: {

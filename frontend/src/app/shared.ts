@@ -32,7 +32,7 @@ export type AboutModalProps = {
   health: Health | null
 }
 
-export type TabId = 'forecast' | 'february' | 'quality' | 'project'
+export type TabId = 'forecast' | 'february' | 'quality' | 'stations' | 'project'
 
 export type ProjectTabProps = {
   meta: Meta

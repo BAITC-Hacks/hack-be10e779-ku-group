@@ -10,6 +10,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.ai.llm import LLMBadOutput, LLMClient, LLMUnavailable
 from app.api import forecast as forecast_api
+from app.api import station_model as station_model_api
 from app.api import stations as stations_api
 from app.config import settings
 from app.db import init_db
@@ -57,6 +58,7 @@ def health() -> Health:
 # роутеры подключаются здесь: app.include_router(<router>, prefix="/api")
 app.include_router(forecast_api.router, prefix="/api")
 app.include_router(stations_api.router, prefix="/api")
+app.include_router(station_model_api.router, prefix="/api")
 
 
 @app.exception_handler(StarletteHTTPException)

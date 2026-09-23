@@ -8,6 +8,7 @@ const en: Dict<typeof ru> = {
     forecast: 'Forecast',
     february: 'Period forecast',
     quality: 'Model quality',
+    stations: 'Stations',
     project: 'About the project',
   },
   headline: {

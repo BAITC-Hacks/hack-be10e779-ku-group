@@ -42,6 +42,14 @@ export async function api<T>(path: string, init?: RequestInit): Promise<T> {
   }
   if (!res.ok) {
     const body = await res.json().catch(() => null)
+    if (!path.startsWith('/api/auth/') && (res.status === 401 || res.status === 403)) {
+      throw new ApiError(
+        res.status,
+        res.status === 401
+          ? 'нужен вход — нажмите «Войти» в шапке или «Демонстратор»'
+          : 'недостаточно прав — войдите под ролью с большими правами (например, «Демонстратор»)',
+      )
+    }
     throw new ApiError(res.status, body?.detail ?? `Ошибка ${res.status}`)
   }
   return res.json() as Promise<T>

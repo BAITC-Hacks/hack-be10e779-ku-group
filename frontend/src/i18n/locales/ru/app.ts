@@ -6,6 +6,7 @@ export default {
     forecast: 'Прогноз',
     february: 'Прогноз на период',
     quality: 'Качество модели',
+    stations: 'Станции',
     project: 'О проекте',
   },
   headline: {

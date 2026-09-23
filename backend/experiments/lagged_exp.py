@@ -5,7 +5,7 @@
 import numpy as np
 import pandas as pd
 
-from app.forecast import data, model, weather
+from app.forecast import data, model
 
 MONTHS = ["2025-10", "2025-11", "2025-12", "2026-01"]
 H = data.load_hourly()
