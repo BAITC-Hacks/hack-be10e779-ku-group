@@ -7,6 +7,7 @@ import { Badge, Notice, Spinner } from './components/ui'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import { SiteFooter } from './components/SiteFooter'
 import { BrandMark } from './components/BrandMark'
+import { LoginBox } from './components/LoginBox'
 import { DEFAULT_ISSUE_DATE, DEFAULT_META } from './lib/constants'
 import { num } from './lib/format'
 import ForecastTab from './features/forecast/ForecastTab'
@@ -160,6 +161,7 @@ export default function App() {
           >
             {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
           </button>
+          <LoginBox />
           <button className="btn btn-ghost btn-sm" onClick={() => setAboutOpen(true)} aria-label="О системе">
             <Info size={16} /> <span className="hide-sm">О системе</span>
           </button>
