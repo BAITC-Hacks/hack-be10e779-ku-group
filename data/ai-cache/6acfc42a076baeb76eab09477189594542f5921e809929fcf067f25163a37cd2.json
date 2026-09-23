@@ -1,0 +1,13 @@
+{
+  "content": "",
+  "tool_calls": [
+    {
+      "id": "call_G8PfQPINX8ARaqkKdF4n6UXq",
+      "name": "build_features",
+      "arguments": "{\"issue_date\":\"2026-02-09\"}"
+    }
+  ],
+  "model": "gpt-4o-mini-2024-07-18",
+  "created_at": "2026-09-23T09:02:31.479224+00:00",
+  "input_hash": "6acfc42a076baeb76eab09477189594542f5921e809929fcf067f25163a37cd2"
+}

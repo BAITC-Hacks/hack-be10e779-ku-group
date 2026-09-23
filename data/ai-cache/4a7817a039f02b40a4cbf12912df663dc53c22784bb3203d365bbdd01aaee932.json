@@ -1,0 +1,13 @@
+{
+  "content": "",
+  "tool_calls": [
+    {
+      "id": "call_Yq1cxTQPMQip1As2V5bcEEyN",
+      "name": "fetch_weather",
+      "arguments": "{\"issue_date\":\"2026-02-09\",\"exclude_sources\":[]}"
+    }
+  ],
+  "model": "gpt-4o-mini-2024-07-18",
+  "created_at": "2026-09-23T09:02:30.244009+00:00",
+  "input_hash": "4a7817a039f02b40a4cbf12912df663dc53c22784bb3203d365bbdd01aaee932"
+}

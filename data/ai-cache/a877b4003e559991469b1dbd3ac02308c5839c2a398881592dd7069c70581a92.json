@@ -1,0 +1,13 @@
+{
+  "content": "",
+  "tool_calls": [
+    {
+      "id": "call_TJpr22C40x1qjsli7wTysJV8",
+      "name": "analyze_forecast",
+      "arguments": "{\"issue_date\":\"2026-02-09\"}"
+    }
+  ],
+  "model": "gpt-4o-mini-2024-07-18",
+  "created_at": "2026-09-23T09:04:21.767933+00:00",
+  "input_hash": "a877b4003e559991469b1dbd3ac02308c5839c2a398881592dd7069c70581a92"
+}

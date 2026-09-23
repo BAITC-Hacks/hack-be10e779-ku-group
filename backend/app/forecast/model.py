@@ -121,7 +121,7 @@ def apply_curve(curve: pd.Series, ws: pd.Series) -> np.ndarray:
     return np.interp(ws.fillna(0).to_numpy(), curve.index.to_numpy(), curve.to_numpy())
 
 
-@lru_cache(maxsize=2)
+@lru_cache(maxsize=8)
 def get_forecaster(until: str = str(TRAIN_END)) -> Forecaster:
     """Обучение занимает секунды; модель держится в памяти процесса."""
     return Forecaster(trained_until=pd.Timestamp(until)).fit()
@@ -155,7 +155,7 @@ def holdout_metrics() -> dict:
                 m = p.notna()
                 agg.setdefault((lead, name), []).append(p[m] - fact[m])
                 agg.setdefault((lead, name, "fact"), []).append(fact[m])
-            cover[lead].append(((fact >= pred["p10"]) & (fact <= pred["p90"])))
+            cover[lead].append((fact >= pred["p10"]) & (fact <= pred["p90"]))
     for (lead, name, *rest), errs in agg.items():
         if rest:
             continue
