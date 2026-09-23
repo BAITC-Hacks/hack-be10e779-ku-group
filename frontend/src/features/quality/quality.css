@@ -1,0 +1,148 @@
+/* Вкладка «Качество модели». Только токены из index.css, префикс q-. */
+
+.q { display: grid; gap: 16px; }
+.q-stack { display: grid; gap: 16px; min-width: 0; }
+.q-grid { display: grid; gap: 16px; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); align-items: start; }
+@media (max-width: 1199px) { .q-grid { grid-template-columns: minmax(0, 1fr); } }
+
+.q-sr-only {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden;
+  clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
+}
+
+/* ---------- заголовок ---------- */
+.q-head { display: grid; gap: 4px; }
+.q-title { margin: 0; font-size: 20px; font-weight: 600; letter-spacing: -0.01em; }
+.q-period { margin: 0; font-size: 13px; }
+.q-period b { font-weight: 600; font-variant-numeric: tabular-nums; }
+.q-intro { margin: 0; font-size: 13px; max-width: 88ch; }
+.q-title-icon { display: inline-flex; align-items: center; gap: 8px; }
+.q-title-icon svg { color: var(--primary); }
+
+/* ---------- главный контраст ---------- */
+.q-hero {
+  display: grid; gap: 24px; padding: 20px 24px;
+  grid-template-columns: minmax(0, 1.7fr) minmax(0, 1fr);
+  border-color: var(--border-strong);
+}
+.q-hero-side { display: grid; gap: 20px; padding-left: 24px; border-left: 1px solid var(--border); align-content: start; }
+@media (max-width: 1023px) {
+  .q-hero { grid-template-columns: minmax(0, 1fr); padding: 16px; }
+  .q-hero-side { padding: 16px 0 0; border-left: 0; border-top: 1px solid var(--border); }
+}
+
+.q-contrast { display: grid; gap: 16px; min-width: 0; }
+.q-contrast-lg { grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); align-items: center; gap: 24px; }
+@media (max-width: 767px) { .q-contrast-lg { grid-template-columns: minmax(0, 1fr); gap: 16px; } }
+
+.q-stat { margin: 6px 0 0; display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 10px; line-height: 1.05; }
+.q-stat-pre { font-size: 16px; color: var(--text-2); font-weight: 500; }
+.q-stat-num {
+  font-size: 60px; font-weight: 700; letter-spacing: -0.04em; color: var(--primary);
+  font-variant-numeric: tabular-nums; text-shadow: 0 0 32px var(--primary-band);
+}
+.q-stat-cap { font-size: 18px; font-weight: 600; color: var(--text); }
+.q-stat.is-worse .q-stat-num { color: var(--warn); text-shadow: none; }
+.q-stat-sub { margin: 8px 0 0; font-size: 13px; color: var(--text-2); }
+.q-stat-sub b { color: var(--text); font-weight: 600; }
+
+.q-contrast-sm { gap: 10px; }
+.q-contrast-sm .q-stat-num { font-size: 32px; letter-spacing: -0.03em; text-shadow: none; }
+.q-contrast-sm .q-stat-cap { font-size: 14px; }
+.q-contrast-sm .q-stat-pre { font-size: 13px; }
+.q-contrast-sm .q-stat-sub { margin-top: 4px; font-size: 12px; }
+@media (max-width: 767px) {
+  .q-stat-num { font-size: 44px; }
+  .q-stat-cap { font-size: 16px; }
+}
+
+.q-bars { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.q-bar { display: grid; grid-template-columns: 132px minmax(0, 1fr) 64px; align-items: center; gap: 10px; font-size: 13px; }
+.q-bar-label { color: var(--text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.q-bar-model .q-bar-label { color: var(--text); font-weight: 600; }
+.q-bar-track { position: relative; height: 10px; border-radius: 999px; background: var(--surface-2); overflow: hidden; }
+.q-bar-fill { position: absolute; inset: 0 auto 0 0; border-radius: 999px; }
+.q-bar-persist .q-bar-fill { opacity: 0.75; }
+.q-bar-val { text-align: right; color: var(--text); }
+.q-contrast-sm .q-bars { gap: 6px; }
+.q-contrast-sm .q-bar { grid-template-columns: 118px minmax(0, 1fr) 56px; font-size: 12px; }
+.q-contrast-sm .q-bar-track { height: 6px; }
+@media (max-width: 479px) {
+  .q-bar, .q-contrast-sm .q-bar { grid-template-columns: 104px minmax(0, 1fr) 52px; gap: 8px; }
+}
+
+/* ---------- таблица ---------- */
+.q-table th .q-unit {
+  display: block; margin-top: 2px; font-size: 10px; font-weight: 500; letter-spacing: 0.02em; text-transform: none;
+  color: var(--text-3);
+}
+.q-table tbody.q-group + tbody.q-group tr:first-child > * { border-top: 1px solid var(--border-strong); }
+.q-table th.q-lead {
+  vertical-align: top; padding-top: 10px; color: var(--text); font-size: 13px; letter-spacing: 0; text-transform: none;
+  border-bottom: 0; white-space: nowrap;
+}
+.q-table tr.q-best td { background: var(--primary-band); }
+.q-table tr.q-best td:nth-last-child(3) { color: var(--primary); font-weight: 600; }
+.q-method { display: inline-flex; align-items: center; flex-wrap: wrap; gap: 4px 8px; }
+.q-swatch { width: 8px; height: 8px; border-radius: 2px; flex: none; }
+.q-best-tag {
+  display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 600; color: var(--primary);
+  white-space: nowrap;
+}
+
+.q-defs { margin: 14px 0 0; display: grid; gap: 4px; font-size: 12px; line-height: 1.45; }
+.q-defs > div { display: flex; gap: 6px; }
+.q-defs dt { flex: none; color: var(--text); font-weight: 600; }
+.q-defs dt::after { content: ' —'; color: var(--text-3); font-weight: 400; }
+.q-defs dd { margin: 0; color: var(--text-2); }
+
+/* ---------- покрытие интервала ---------- */
+.q-coverage { display: grid; gap: 16px; }
+.q-lead-text { margin: 0; }
+.q-cover-group { display: grid; gap: 10px; }
+.q-cover { display: grid; grid-template-columns: 48px minmax(0, 1fr) 60px; align-items: center; gap: 10px; font-size: 13px; }
+.eyebrow + .q-cover { margin-top: 18px; }
+.q-cover-label { color: var(--text-2); }
+.q-cover-val { text-align: right; font-weight: 600; }
+.q-cover-track {
+  position: relative; height: 12px; border-radius: 999px; background: var(--surface-2); border: 1px solid var(--border);
+}
+.q-cover-fill { position: absolute; inset: 0 auto 0 0; border-radius: 999px; background: var(--primary); }
+.q-cover-fill.is-ok { background: var(--ok); }
+.q-cover.is-muted .q-cover-fill { background: var(--text-3); }
+.q-cover.is-muted .q-cover-val { color: var(--text-2); font-weight: 500; }
+.q-cover-target {
+  position: absolute; top: -5px; bottom: -5px; width: 2px; margin-left: -1px; background: var(--text); border-radius: 1px;
+}
+.q-cover-target-label {
+  display: none; position: absolute; bottom: calc(100% + 2px); left: 50%; transform: translateX(-50%);
+  font-size: 11px; color: var(--text-2); white-space: nowrap;
+}
+.eyebrow + .q-cover .q-cover-target-label { display: block; }
+
+.q-cal-line { margin: 2px 0 0; font-size: 14px; }
+.q-cal-line b { font-weight: 600; }
+.q-coverage .muted.small { margin: 0; }
+.q-honest {
+  display: flex; gap: 8px; align-items: flex-start; margin: 0; padding: 8px 10px; border-radius: var(--radius-sm);
+  background: var(--warn-bg); color: var(--warn); font-size: 12.5px; line-height: 1.45;
+}
+.q-honest > svg { flex: none; margin-top: 1px; }
+.q-honest.is-ok { background: var(--ok-bg); color: var(--ok); }
+
+/* ---------- прогноз против факта ---------- */
+.q-holdout .card-head { flex-wrap: wrap; align-items: center; }
+.q-datepick { display: inline-flex; align-items: center; gap: 4px; }
+.q-date input {
+  height: 30px; padding: 0 8px; border: 1px solid var(--border-strong); border-radius: 10px; background: transparent;
+  font-size: 13px;
+}
+@media (max-width: 767px) { .q-date input { height: 44px; } }
+.q-holdout-sub { margin: -4px 0 12px; }
+.q-holdout .notice { margin-bottom: 12px; }
+.q-holdout-mae { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 16px; margin-bottom: 8px; font-size: 13px; }
+.q-holdout-mae b { font-size: 18px; font-weight: 600; color: var(--text); }
+.q-holdout-mae > span:nth-child(2) b { color: var(--primary); }
+
+/* ---------- пусто ---------- */
+.q-empty-hint { margin: 0 0 8px; max-width: 60ch; font-size: 13px; }

@@ -1,0 +1,45 @@
+/* Шапка и каркас страницы. */
+.topbar {
+  display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 16px;
+  padding: 10px 0 18px; border-bottom: 1px solid var(--border); margin-bottom: 20px;
+}
+.brand { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.brand > div { min-width: 0; }
+.brand-mark {
+  display: grid; place-items: center; width: 40px; height: 40px; border-radius: 12px; flex: none;
+  background: var(--primary-deep); color: var(--primary); border: 1px solid var(--border-strong);
+  box-shadow: 0 0 24px var(--primary-band);
+}
+.brand-name { font-size: 18px; font-weight: 700; letter-spacing: -0.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.brand-sub { font-size: 12px; color: var(--text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.tabs { display: flex; justify-content: center; gap: 4px; }
+.tab {
+  height: 36px; padding: 0 14px; border: 1px solid transparent; border-radius: 10px; background: transparent;
+  color: var(--text-2); font-weight: 600; cursor: pointer;
+}
+.tab:hover { color: var(--text); }
+.tab[aria-current='page'] { color: var(--primary); background: var(--primary-band); border-color: var(--border-strong); }
+
+.topbar-right { display: flex; align-items: center; gap: 8px; justify-content: flex-end; flex-wrap: wrap; }
+.headline {
+  display: grid; text-align: left; gap: 0; padding: 4px 10px; border-radius: 10px; cursor: pointer;
+  border: 1px solid var(--border); background: var(--surface); font-size: 12px; line-height: 1.35;
+}
+.headline:hover { border-color: var(--border-strong); }
+.badge .dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+
+.server-error { margin-bottom: 16px; }
+.footer { margin-top: 32px; padding-top: 16px; border-top: 1px solid var(--border); }
+
+@media (max-width: 1199px) {
+  .topbar { grid-template-columns: minmax(0, 1fr) auto; }
+  .tabs { grid-column: 1 / -1; grid-row: 2; justify-content: flex-start; overflow-x: auto; }
+  .headline { display: none; }
+}
+@media (max-width: 767px) {
+  .brand-sub { display: none; }
+  .hide-sm { display: none; }
+  .topbar-right { gap: 4px; }
+  .tab { padding: 0 10px; font-size: 13px; }
+}

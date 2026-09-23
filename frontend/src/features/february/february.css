@@ -1,0 +1,128 @@
+/* Вкладка «Февраль 2026». Префикс feb-, только переменные из index.css. */
+
+.feb { display: grid; gap: 16px; }
+.feb > *, .feb-stack > * { min-width: 0; }
+.feb-stack { display: grid; gap: 16px; }
+
+/* ---------- шапка ---------- */
+.feb-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px 16px; flex-wrap: wrap; }
+.feb-head-text { min-width: 0; flex: 1 1 420px; }
+.feb-title { margin: 0; font-size: 22px; font-weight: 700; letter-spacing: -0.01em; line-height: 1.25; }
+.feb-lead { margin: 4px 0 0; color: var(--text-2); }
+.feb-head-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+/* ---------- запуск прогона ---------- */
+.feb-confirm, .feb-running {
+  display: flex; align-items: center; gap: 12px 16px; flex-wrap: wrap;
+  padding: 12px 14px; border-radius: var(--radius-sm); border: 1px solid var(--border-strong); background: var(--surface-2);
+}
+.feb-confirm { justify-content: space-between; }
+.feb-confirm > div:first-child { min-width: 0; flex: 1 1 280px; }
+.feb-confirm-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.feb-running { background: var(--primary-band); flex-wrap: nowrap; }
+.feb-running > .muted { color: var(--primary); }
+
+/* ---------- пустое состояние ---------- */
+.feb-empty-ico { color: var(--primary); }
+.feb-empty-text { max-width: 520px; margin: 0 0 8px; }
+.feb-empty-run { width: 100%; max-width: 640px; text-align: left; }
+
+/* ---------- KPI ---------- */
+.feb-kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.feb-kpi {
+  display: grid; align-content: start; gap: 4px; min-width: 0; padding: 14px 16px;
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow);
+}
+.feb-kpi-val { font-size: 28px; font-weight: 500; line-height: 1.15; letter-spacing: -0.02em; color: var(--text); }
+.feb-kpi-unit { font-size: 14px; font-weight: 400; letter-spacing: 0; color: var(--text-2); }
+.feb-kpi-file { display: block; padding-top: 6px; font-size: 13px; line-height: 1.4; letter-spacing: 0; overflow-wrap: anywhere; }
+.feb-kpi-sub { line-height: 1.4; }
+
+/* ---------- календарь + график ---------- */
+.feb-main { display: grid; gap: 16px; grid-template-columns: minmax(0, 1fr); align-items: start; }
+@media (min-width: 1280px) {
+  .feb-main { grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); }
+}
+
+.feb-cal-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; }
+.feb-cal-wd {
+  text-align: center; font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-3);
+}
+.feb-cell {
+  position: relative; display: flex; flex-direction: column; align-items: flex-start; justify-content: space-between;
+  min-width: 0; min-height: 68px; padding: 6px 7px 12px; overflow: hidden;
+  border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface-2);
+  color: var(--text); font: inherit; text-align: left;
+}
+button.feb-cell { cursor: pointer; transition: border-color 0.15s, background 0.15s; }
+button.feb-cell:hover { border-color: var(--border-strong); background: var(--primary-band); }
+.feb-cell-day { font-size: 15px; font-weight: 600; line-height: 1; font-variant-numeric: tabular-nums; }
+.feb-cell-val { margin-top: 8px; font-size: 12px; line-height: 1.1; color: var(--text-2); white-space: nowrap; }
+.feb-cell-flag { position: absolute; top: 6px; right: 6px; color: var(--warn); }
+.feb-cell-bar {
+  position: absolute; left: 7px; right: 7px; bottom: 6px; height: 3px; border-radius: 2px; background: var(--border);
+}
+.feb-cell-bar > span { display: block; height: 100%; border-radius: inherit; background: var(--primary); }
+.feb-cell--out { background: transparent; border-style: dashed; opacity: 0.45; }
+.feb-cell--out .feb-cell-day { color: var(--text-3); font-weight: 500; }
+.feb-cell--none { background: transparent; border-style: dashed; }
+
+.feb-legend { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 16px; margin-top: 10px; }
+.feb-legend > span { display: inline-flex; align-items: center; gap: 6px; }
+.feb-legend-bar { display: inline-block; width: 24px; height: 4px; border-radius: 2px; overflow: hidden; background: var(--border); }
+.feb-legend-bar > span { display: block; width: 60%; height: 100%; background: var(--primary); }
+.feb-warn-ico { color: var(--warn); flex: none; }
+.feb-sw { display: inline-block; width: 10px; height: 10px; border-radius: 2px; flex: none; }
+.feb-sw--d1 { background: var(--primary); }
+.feb-sw--warn { background: var(--warn); }
+.feb-sw--d2 { background: var(--primary); opacity: 0.35; }
+
+.feb-final { display: grid; gap: 6px; margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--border); }
+
+/* ---------- выгрузка ---------- */
+.feb-dl { display: grid; gap: 12px; }
+.feb-dl-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.feb-format summary { cursor: pointer; font-weight: 600; color: var(--text-2); width: fit-content; }
+.feb-format summary:hover { color: var(--text); }
+.feb-format[open] summary { margin-bottom: 8px; }
+.feb-format p { margin: 0 0 8px; }
+.feb-cols { display: grid; grid-template-columns: minmax(0, 1fr); gap: 0 24px; margin: 8px 0 12px; }
+.feb-cols > div {
+  display: grid; grid-template-columns: 92px minmax(0, 1fr); gap: 12px; padding: 5px 0; border-bottom: 1px solid var(--border);
+  font-size: 13px;
+}
+.feb-cols dt { margin: 0; }
+.feb-cols dd { margin: 0; color: var(--text-2); }
+@media (min-width: 1024px) {
+  .feb-cols { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+/* ---------- таблица ---------- */
+.feb-table td { white-space: nowrap; }
+.feb-row { cursor: pointer; }
+.feb-row:hover td { background: var(--surface-2); }
+.feb-flags-inner { display: inline-flex; align-items: center; gap: 6px; max-width: 380px; min-width: 0; vertical-align: middle; }
+.feb-flags-text { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-2); }
+
+/* ---------- адаптив ---------- */
+@media (max-width: 1023px) {
+  .feb-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 767px) {
+  .feb-title { font-size: 18px; }
+  .feb-head-actions, .feb-head-actions .btn { width: 100%; }
+  .feb-kpi { padding: 12px; }
+  .feb-kpi-val { font-size: 22px; }
+  .feb-cal-grid { gap: 4px; }
+  .feb-cell { min-height: 50px; padding: 4px 5px 10px; }
+  .feb-cell-day { font-size: 13px; }
+  .feb-cell-val { margin-top: 4px; font-size: 10.5px; }
+  .feb-cell-flag { top: 4px; right: 3px; width: 10px; height: 10px; }
+  .feb-cell-bar { left: 5px; right: 5px; bottom: 4px; }
+  .feb-unit { display: none; }
+  .feb-dl-actions .btn { width: 100%; height: auto; min-height: 44px; padding: 8px 14px; white-space: normal; text-align: center; }
+  .feb-confirm-actions { width: 100%; }
+  .feb-confirm-actions .btn { flex: 1; }
+  .feb-cols > div { grid-template-columns: 80px minmax(0, 1fr); }
+  .feb-flags-inner { max-width: 200px; }
+}
