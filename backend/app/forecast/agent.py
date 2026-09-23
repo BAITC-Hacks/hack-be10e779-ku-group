@@ -200,7 +200,7 @@ def _track(t) -> None:
     fn = t.fn
 
     def wrapped(args):
-        t0, ok = time.monotonic(), False
+        t0, ok, out = time.monotonic(), False, None
         try:
             out = fn(args)
             ok = not (isinstance(out, dict) and "error" in out)
@@ -209,7 +209,9 @@ def _track(t) -> None:
             d = getattr(_local, "issue", None)
             if d:
                 _progress.setdefault(d, []).append(
-                    {"type": "tool", "name": t.name, "ok": ok, "ms": round((time.monotonic() - t0) * 1000)})
+                    {"type": "tool", "name": t.name, "ok": ok, "ms": round((time.monotonic() - t0) * 1000),
+                     "arguments": args.model_dump_json() if hasattr(args, "model_dump_json") else None,
+                     "output": json.dumps(out, ensure_ascii=False, default=str)[:1500] if out is not None else None})
 
     t.fn = wrapped
 
@@ -284,7 +286,8 @@ def run(issue_date: str, planner_only: bool = False) -> dict:
     fallback = False
     if mode == "live":
         try:
-            res = run_agent(SYSTEM, f"Сделай прогноз. Дата выпуска: {issue_date}.", TOOLS, llm)
+            res = run_agent(SYSTEM, f"Сделай прогноз. Дата выпуска: {issue_date}.", TOOLS, llm,
+                            on_step=lambda s: _progress.setdefault(issue_date, []).append(s))
             explanation, steps = res.answer, res.steps
         except LLMUnavailable:
             mode = "demo"

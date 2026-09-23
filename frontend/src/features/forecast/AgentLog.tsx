@@ -45,10 +45,19 @@ export function AgentLog(props: {
           <p className="fc-log-empty">{t('forecast.log.idle')}</p>
         )}
         {state === 'running' && (
-          <div className="fc-log-running">
-            <Spinner label={t('forecast.log.running', { sec: props.elapsed })} />
-            <p className="muted small">{t('forecast.log.runningNote')}</p>
-          </div>
+          <>
+            {steps.length > 0 && (
+              <ol className="fc-steps">
+                {steps.map((s, i) => (
+                  <StepRow key={`live-${i}`} step={s} index={i} repeated={isRepeat(steps, i)} />
+                ))}
+              </ol>
+            )}
+            <div className="fc-log-running">
+              <Spinner label={`${nowText(steps, props.metaMode, t)} · ${props.elapsed} с`} />
+              <p className="muted small">{t('forecast.log.runningNote')}</p>
+            </div>
+          </>
         )}
         {state === 'ready' && (
           <ol className="fc-steps">
@@ -83,6 +92,17 @@ export function AgentLog(props: {
       )}
     </section>
   )
+}
+
+/** Что агент делает прямо сейчас — по последней записи живого журнала. */
+function nowText(steps: AgentStep[], mode: Mode, t: ReturnType<typeof useT>['t']): string {
+  const last = steps[steps.length - 1]
+  if (last?.type === 'model' && last.tool_calls?.length) {
+    const doneAfter = steps.slice(steps.lastIndexOf(last) + 1).map((s) => s.name)
+    const left = last.tool_calls.filter((n) => !doneAfter.includes(n))
+    if (left.length) return t('forecast.log.nowTools', { list: left.join(', ') })
+  }
+  return mode === 'live' ? t('forecast.log.nowThinking') : t('forecast.log.nowPlanner')
 }
 
 function ModeBadge(props: { f: Forecast | null; metaMode: Mode; llmModel: string | null }) {

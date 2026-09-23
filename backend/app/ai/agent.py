@@ -67,7 +67,9 @@ def _run_tool(t: Tool, arguments: str) -> tuple[str, bool]:
         return f"Ошибка инструмента: {type(exc).__name__}: {exc}", False
 
 
-def run_agent(system: str, user: str, tools: list[Tool], llm: LLMClient | None = None) -> AgentResult:
+def run_agent(
+    system: str, user: str, tools: list[Tool], llm: LLMClient | None = None, on_step: Callable | None = None
+) -> AgentResult:
     """Системная инструкция + пользовательский ввод (данные, не инструкции) → ответ и журнал шагов."""
     llm = llm or LLMClient()
     by_name = {t.name: t for t in tools}
@@ -93,6 +95,8 @@ def run_agent(system: str, user: str, tools: list[Tool], llm: LLMClient | None =
                 "ms": round((time.monotonic() - t0) * 1000),
             }
         )
+        if on_step:  # живой журнал для интерфейса: ход LLM виден сразу, до выполнения инструментов
+            on_step(result.steps[-1])
         if not turn["tool_calls"]:
             result.answer = turn["content"]
             break
