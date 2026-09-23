@@ -1,8 +1,8 @@
-# Ветер·Прогноз
+# Анемо
 
 ## 1. Название проекта
 
-**Ветер·Прогноз** — агентная система прогнозирования почасовой выработки ветроэлектростанции на 24–48 часов.
+**Анемо** — агентная система прогнозирования почасовой выработки ветроэлектростанции на 24–48 часов.
 
 Трек HackAlem AI — **«Энергетика»**, задача — **Agentic AI для прогнозирования выработки ВЭС**. Формулировка задачи, исходные условия и допущения команды сохранены в [CASE.md](CASE.md).
 
@@ -323,6 +323,7 @@ Open-Meteo получает координаты, период и перечен
 | Apache ECharts | Графики | Apache-2.0 | [ECharts](https://github.com/apache/echarts) |
 | Leaflet | Карта станции | BSD-2-Clause | [Leaflet](https://github.com/Leaflet/Leaflet) |
 | OpenStreetMap | Подложка карты | ODbL | [OpenStreetMap](https://www.openstreetmap.org/copyright) |
+| Логотипы HackAlem AI, организаторов и партнёров | Указание события и его организаторов в подвале интерфейса | Отдельная открытая лицензия в репозитории не указана | [hackalem.ai](https://hackalem.ai/), [файлы](frontend/public/partners/), [источник и назначение в коде](frontend/src/components/SiteFooter.tsx) |
 | Lucide | Иконки | ISC | [Lucide](https://github.com/lucide-icons/lucide) |
 | Manrope, JetBrains Mono через Fontsource | Локальные шрифты | OFL-1.1 | [Manrope](https://fontsource.org/fonts/manrope), [JetBrains Mono](https://fontsource.org/fonts/jetbrains-mono) |
 | Vite, create-vite, plugin-react | Сборка и шаблон frontend | MIT | [Vite](https://github.com/vitejs/vite) |
