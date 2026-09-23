@@ -11,6 +11,7 @@ import { LanguageSelector } from './components/LanguageSelector'
 import { ThemeToggle } from './components/ThemeToggle'
 import { useT, type TKey } from './i18n'
 import * as themes from './lib/themeManager'
+import { LoginBox } from './components/LoginBox'
 import { DEFAULT_ISSUE_DATE, DEFAULT_META } from './lib/constants'
 import { num } from './lib/format'
 import ForecastTab from './features/forecast/ForecastTab'
@@ -181,6 +182,7 @@ export default function App() {
           )}
           <LanguageSelector />
           <ThemeToggle mode={themeMode} onChange={changeThemeMode} />
+          <LoginBox />
           <button className="btn btn-ghost btn-sm" onClick={() => setAboutOpen(true)} aria-label={t('app.about')}>
             <Info size={16} /> <span className="hide-sm">{t('app.about')}</span>
           </button>

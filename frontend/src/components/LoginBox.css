@@ -1,0 +1,22 @@
+.loginbox { position: relative; }
+.loginbox-panel {
+  position: absolute; right: 0; top: calc(100% + 8px); z-index: 50;
+  width: min(320px, calc(100vw - 32px));
+  display: flex; flex-direction: column; gap: 10px; padding: 14px;
+  background: var(--surface-solid, var(--bg, #fff)); color: inherit;
+  border: 1px solid var(--border, rgba(127,127,127,.3)); border-radius: 10px;
+  box-shadow: 0 10px 30px rgba(0,0,0,.25);
+}
+.loginbox-panel label { display: flex; flex-direction: column; gap: 4px; font-size: 13px; }
+.loginbox-panel input {
+  padding: 6px 8px; border-radius: 6px; font: inherit; color: inherit;
+  background: transparent; border: 1px solid var(--border, rgba(127,127,127,.4));
+}
+.loginbox-actions { display: flex; gap: 8px; }
+.loginbox-reason { font-size: 13px; }
+.loginbox-error { font-size: 13px; color: var(--error, #d33); }
+.loginbox-hint { display: flex; flex-direction: column; gap: 4px; font-size: 12px; opacity: .85; }
+.loginbox-user {
+  text-align: left; background: none; border: none; padding: 2px 0; color: inherit; cursor: pointer; font: inherit;
+}
+.loginbox-user:hover { text-decoration: underline; }
