@@ -1,0 +1,99 @@
+/* Подвал «Проект в рамках HackAlem AI» + лента организаторов и партнёров. Только CSS-переменные из index.css. */
+.sf {
+  position: relative; overflow: hidden; isolation: isolate;
+  margin-top: 40px; padding: 28px 28px 18px;
+  border: 1px solid var(--border); border-radius: calc(var(--radius) + 4px);
+  background:
+    linear-gradient(180deg, var(--surface) 0%, transparent 100%),
+    var(--surface-solid);
+  box-shadow: var(--shadow);
+}
+/* тонкая светящаяся линия сверху + размытое пятно акцента */
+.sf::before {
+  content: ''; position: absolute; inset: 0 0 auto 0; height: 1px; z-index: 1;
+  background: linear-gradient(90deg, transparent, var(--primary) 30%, var(--primary) 70%, transparent);
+  opacity: 0.55;
+}
+.sf-glow {
+  position: absolute; z-index: -1; width: 520px; height: 260px; left: 50%; top: -170px; transform: translateX(-50%);
+  background: radial-gradient(closest-side, var(--primary-band), transparent);
+  filter: blur(8px); pointer-events: none;
+}
+
+/* ---- верх: логотип события, заявление, ссылка ---- */
+.sf-top { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 24px; }
+.sf-event {
+  display: grid; place-items: center; padding: 14px 18px; border-radius: 14px;
+  background: #060b16; /* как у hackalem.ai: у знака белые буквы — плашка тёмная в обеих темах */
+  border: 1px solid rgba(0, 154, 240, 0.35);
+  box-shadow: 0 0 0 4px rgba(0, 154, 240, 0.06), 0 10px 30px rgba(0, 154, 240, 0.12);
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+.sf-event:hover { transform: translateY(-2px); box-shadow: 0 0 0 4px rgba(0, 154, 240, 0.12), 0 14px 36px rgba(0, 154, 240, 0.2); }
+.sf-event-logo { height: 30px; width: auto; display: block; }
+.sf-claim { min-width: 0; }
+.sf-title { margin: 4px 0 4px; font-size: 22px; line-height: 1.25; font-weight: 700; letter-spacing: -0.01em; }
+.sf-accent {
+  background: linear-gradient(90deg, #009af0, var(--primary));
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+}
+.sf-sub { margin: 0; color: var(--text-2); font-size: 13px; }
+.sf-sub b { color: var(--text); font-weight: 600; }
+.sf-site { text-decoration: none; }
+
+/* ---- лента организаторов ---- */
+.sf-partners { margin-top: 26px; }
+.sf-partners-head { display: flex; align-items: center; gap: 14px; margin-bottom: 14px; }
+.sf-line { flex: 1; height: 1px; background: linear-gradient(90deg, var(--border-strong), transparent); }
+
+.sf-marquee {
+  overflow: hidden;
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
+  mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
+}
+.sf-track { display: flex; width: max-content; animation: sf-scroll 40s linear infinite; }
+.sf-marquee:hover .sf-track, .sf-marquee:focus-within .sf-track { animation-play-state: paused; }
+@keyframes sf-scroll { to { transform: translateX(-50%); } }
+
+.sf-list { display: flex; align-items: center; gap: 56px; margin: 0; padding: 8px 28px; list-style: none; }
+.sf-logo { flex: none; display: grid; place-items: center; height: 60px; }
+.sf-img {
+  display: block; width: auto; max-width: 180px; object-fit: contain; user-select: none;
+  filter: brightness(0) invert(1); opacity: 0.62; /* монохром, как на лендинге */
+  transition: opacity 0.2s, transform 0.2s;
+}
+.sf-img-invert { filter: none; opacity: 0.8; }
+.sf-logo:hover .sf-img { opacity: 1; transform: scale(1.04); }
+.sf-logo-text { font-size: 12px; font-weight: 600; color: var(--text-2); max-width: 180px; text-align: center; line-height: 1.3; }
+
+/* светлая тема: логотипы графитовые */
+:root[data-theme='light'] .sf-img { filter: brightness(0); opacity: 0.55; }
+:root[data-theme='light'] .sf-img-invert { filter: invert(1); opacity: 0.7; }
+:root[data-theme='light'] .sf-logo:hover .sf-img { opacity: 0.9; }
+
+/* ---- низ: источники ---- */
+.sf-bottom {
+  display: flex; flex-wrap: wrap; gap: 6px 10px; margin-top: 18px; padding-top: 14px;
+  border-top: 1px solid var(--border); color: var(--text-3); font-size: 12px;
+}
+
+/* ---- адаптив ---- */
+@media (max-width: 1023px) {
+  .sf-top { grid-template-columns: auto 1fr; }
+  .sf-site { display: none; }
+}
+@media (max-width: 767px) {
+  .sf { padding: 20px 16px 14px; }
+  .sf-top { grid-template-columns: 1fr; gap: 14px; }
+  .sf-event { justify-self: start; }
+  .sf-title { font-size: 18px; }
+  .sf-list { gap: 36px; padding: 6px 18px; }
+}
+
+/* без анимации — статичная сетка логотипов, копия ленты не нужна */
+@media (prefers-reduced-motion: reduce) {
+  .sf-marquee { -webkit-mask-image: none; mask-image: none; }
+  .sf-track { animation: none; width: auto; }
+  .sf-list { flex-wrap: wrap; justify-content: center; gap: 24px 40px; }
+  .sf-list-clone { display: none; }
+}

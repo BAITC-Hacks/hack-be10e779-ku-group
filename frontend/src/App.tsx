@@ -5,6 +5,7 @@ import type { Health, Meta, Metrics } from './api/types'
 import type { Theme } from './app/shared'
 import { Badge, Notice, Spinner } from './components/ui'
 import { ErrorBoundary } from './components/ErrorBoundary'
+import { SiteFooter } from './components/SiteFooter'
 import { DEFAULT_ISSUE_DATE, DEFAULT_META } from './lib/constants'
 import { num } from './lib/format'
 import ForecastTab from './features/forecast/ForecastTab'
@@ -196,9 +197,7 @@ export default function App() {
         </div>
       </main>
 
-      <footer className="footer muted small">
-        KU group · HackAlem AI 2026 · погода: Open-Meteo Previous Runs API (CC BY 4.0) · данные турбин — организатор хакатона
-      </footer>
+      <SiteFooter />
 
       <AboutModal open={aboutOpen} onClose={() => setAboutOpen(false)} meta={meta} health={health} />
     </div>
