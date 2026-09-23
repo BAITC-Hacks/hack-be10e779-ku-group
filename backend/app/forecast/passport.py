@@ -53,6 +53,8 @@ def build(issue_date: str, x: pd.DataFrame, hours: list[dict], weather_info: dic
         "features": x[model.FEATURES].round(4).astype(object).where(x[model.FEATURES].notna(), None).values.tolist(),
         "model_id": model_id(),
         "calibration_id": calibration_id(),
+        # режим — часть версии: LIVE-выпуск (решения LLM) хранится отдельно от прогона планировщика
+        "execution_mode": "llm" if mode == "live" else "deterministic",
     }
     input_hash = _hash(inputs)
     result = [[h["time"], h["p10"], h["p50"], h["p90"]] for h in hours]

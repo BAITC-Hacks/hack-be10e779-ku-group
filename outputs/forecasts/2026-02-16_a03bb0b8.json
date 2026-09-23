@@ -1,9 +1,9 @@
 {
  "passport": {
-  "forecast_id": "2026-02-16_57e12fae",
-  "parent_id": "2026-02-15_ee243a4d",
+  "forecast_id": "2026-02-16_a03bb0b8",
+  "parent_id": "2026-02-15_21802606",
   "decision_at": "2026-02-16T23:59:00+05:00",
-  "created_at": "2026-09-23T10:18:47+00:00",
+  "created_at": "2026-09-23T10:26:58+00:00",
   "target_start": "2026-02-17T00:00:00+05:00",
   "target_end": "2026-02-18T23:00:00+05:00",
   "weather_profile": {
@@ -43,7 +43,7 @@
   "calibration_end": "2025-12-31T23:00:00+05:00",
   "model_id": "hgb-q-a50c1ec8e8",
   "calibration_id": "cqr-73b58def25",
-  "input_hash": "57e12fae79e8a3cc5963f57cf482ef5388a1178bb31baa1f18454623e6b2e37d",
+  "input_hash": "a03bb0b88094add4c6dfc464c21ee3285961e61047505e71e380a2b15b71ae60",
   "result_hash": "2a3516f37cceb4ec42001d6ab9a50840c792be4a84d6c7355638f93cd6f7635c",
   "execution_mode": "deterministic",
   "hours_outside_test_period": 0
@@ -701,7 +701,7 @@
    ],
    "changed_vs_previous": 0.0738,
    "update": {
-    "previous_id": "2026-02-15_ee243a4d",
+    "previous_id": "2026-02-15_21802606",
     "previous_issue": "2026-02-15",
     "day": "2026-02-17",
     "common_hours": 24,
@@ -767,7 +767,7 @@
     "arguments": "{\"issue_date\": \"2026-02-16\"}",
     "output": "{\"measured_until\": \"2026-01-31 23:00:00\", \"window_hours\": 48, \"sources\": [{\"source\": \"ecmwf_ws10\", \"mae_ms\": 1.836, \"hours\": 721, \"missing_share\": 0.0, \"missing_hours_in_window\": 0}, {\"source\": \"best_match_ws100\", \"mae_ms\": 1.951, \"hours\": 721, \"missing_share\": 0.0, \"missing_hours_in_window\": 0}, {\"source\": \"cma_ws10\", \"mae_ms\": 2.178, \"hours\": 486, \"missing_share\": 0.326, \"missing_hours_in_window\": 0}, {\"source\": \"gem_ws10\", \"mae_ms\": 2.187, \"hours\": 721, \"missing_share\": 0.0, \"missing_hours_in_window\": 0}, {\"source\": \"icon_ws100\", \"mae_ms\": 2.211, \"hours\": 721, \"missing_share\": 0.0, \"missing_hours_in_window\": 0}, {\"source\": \"icon_ws10\", \"mae_ms\": 2.212, \"hours\": 721, \"missing_share\": 0.0, \"missing_hours_in_window\": 0}, {\"source\": \"gfs_ws10\", \"mae_ms\": 2.436, \"hours\": 721, \"missing_share\": 0.0, \"missing_hours_in_window\": 0}, {\"source\": \"ecmwf_ws100\", \"mae_ms\": 2.501, \"hours\": 721, \"missing_share\": 0.0, \"missing_hours_in_window\": 0}, {\"source\": \"jma_ws10\", \"mae_ms\": 2.572, \"hours\": 721, \"missing_share\": 0.0, \"missing_hours_in_window\": 0}, {\"source\": \"gfs_ws100\", \"mae_ms\": 3.3, \"hours\": 721, \"missing_share\": 0.0, \"missing_hours_in_window\": 0}]}",
     "ok": true,
-    "ms": 34
+    "ms": 32
    },
    {
     "type": "tool",
@@ -775,7 +775,7 @@
     "arguments": "{\"issue_date\": \"2026-02-16\", \"exclude_sources\": []}",
     "output": "{\"source\": \"Open-Meteo Previous Runs API (best_match)\", \"runs\": \"выпуск за 1 сут — 17 ч, выпуск за 2 сут — 24 ч, выпуск за 3 сут — 7 ч; задержка публикации 7 ч; все выпуски опубликованы не позже 2026-02-16 23:59\", \"leads_by_hour\": {\"2026-02-17T00:00\": 1, \"2026-02-17T01:00\": 1, \"2026-02-17T02:00\": 1, \"2026-02-17T03:00\": 1, \"2026-02-17T04:00\": 1, \"2026-02-17T05:00\": 1, \"2026-02-17T06:00\": 1, \"2026-02-17T07:00\": 1, \"2026-02-17T08:00\": 1, \"2026-02-17T09:00\": 1, \"2026-02-17T10:00\": 1, \"2026-02-17T11:00\": 1, \"2026-02-17T12:00\": 1, \"2026-02-17T13:00\": 1, \"2026-02-17T14:00\": 1, \"2026-02-17T15:00\": 1, \"2026-02-17T16:00\": 1, \"2026-02-17T17:00\": 2, \"2026-02-17T18:00\": 2, \"2026-02-17T19:00\": 2, \"2026-02-17T20:00\": 2, \"2026-02-17T21:00\": 2, \"2026-02-17T22:00\": 2, \"2026-02-17T23:00\": 2, \"2026-02-18T00:00\": 2, \"2026-02-18T01:00\": 2, \"2026-02-18T02:00\": 2, \"2026-02-18T03:00\": 2, \"2026-02-18T04:00\": 2, \"2026-02-18T05:00\": 2, \"2026-02-18T06:00\": 2, \"2026-02-18T07:00\": 2, \"2026-02-18T08:00\": 2, \"2026-02-18T09:00\": 2, \"2026-02-18T10:00\": 2, \"2026-02-18T11:00\": 2, \"2026-02-18T12:00\": 2, \"2026-02-18T13:00\": 2, \"2026-02-18T14:00\": 2, \"2026-02-18T15:00\": 2, \"2026-02-18T16:00\": 2, \"2026-02-18T17:00\": 3, \"2026-02-18T18:00\": 3, \"2026-02-18T19:00\": 3, \"2026-02-18T20:00\": 3, \"2026-02-18T21:00\": 3, \"2026-02-18T22:00\": 3, \"2026-02-18T23:00\": 3}, \"hours\": 48, \"missing_hours\": 0, \"wind_100m_mean\": 6.64, \"wind_100m_max\": 11.28, \"time_integrity\": {\"issued_at\": \"2026-02-16T23:59\", \"latest_weather_run\": \"2026-02",
     "ok": true,
-    "ms": 74
+    "ms": 71
    },
    {
     "type": "tool",
@@ -791,7 +791,7 @@
     "arguments": "{\"issue_date\": \"2026-02-16\"}",
     "output": "{\"hours\": 48, \"energy_d1\": 7.63, \"energy_d2\": 17.72, \"calibration\": \"split-conformal (CQR) по режимам ветра\", \"interval_coverage_check\": 0.775}",
     "ok": true,
-    "ms": 64
+    "ms": 70
    },
    {
     "type": "tool",
@@ -813,7 +813,7 @@
     "type": "tool",
     "name": "compare_with_previous",
     "arguments": "{\"issue_date\": \"2026-02-16\"}",
-    "output": "{\"previous_id\": \"2026-02-15_ee243a4d\", \"previous_issue\": \"2026-02-15\", \"day\": \"2026-02-17\", \"common_hours\": 24, \"mean_abs_change\": 0.0738, \"max_abs_change\": 0.2361, \"energy_old\": 7.65, \"energy_new\": 7.63, \"hours_changed_10pp\": 7, \"changed_hours\": [\"2026-02-17T00:00\", \"2026-02-17T12:00\", \"2026-02-17T16:00\", \"2026-02-17T17:00\", \"2026-02-17T18:00\", \"2026-02-17T19:00\", \"2026-02-17T22:00\"], \"significant\": true, \"method\": \"сравнение сохранённых версий\"}",
+    "output": "{\"previous_id\": \"2026-02-15_21802606\", \"previous_issue\": \"2026-02-15\", \"day\": \"2026-02-17\", \"common_hours\": 24, \"mean_abs_change\": 0.0738, \"max_abs_change\": 0.2361, \"energy_old\": 7.65, \"energy_new\": 7.63, \"hours_changed_10pp\": 7, \"changed_hours\": [\"2026-02-17T00:00\", \"2026-02-17T12:00\", \"2026-02-17T16:00\", \"2026-02-17T17:00\", \"2026-02-17T18:00\", \"2026-02-17T19:00\", \"2026-02-17T22:00\"], \"significant\": true, \"method\": \"сравнение сохранённых версий\"}",
     "ok": true,
     "ms": 5
    }

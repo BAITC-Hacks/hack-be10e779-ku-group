@@ -1,9 +1,9 @@
 {
  "passport": {
-  "forecast_id": "2026-02-18_294b0676",
-  "parent_id": "2026-02-17_635591cc",
+  "forecast_id": "2026-02-18_936fcd32",
+  "parent_id": "2026-02-17_458c4a8e",
   "decision_at": "2026-02-18T23:59:00+05:00",
-  "created_at": "2026-09-23T10:18:47+00:00",
+  "created_at": "2026-09-23T10:26:59+00:00",
   "target_start": "2026-02-19T00:00:00+05:00",
   "target_end": "2026-02-20T23:00:00+05:00",
   "weather_profile": {
@@ -43,7 +43,7 @@
   "calibration_end": "2025-12-31T23:00:00+05:00",
   "model_id": "hgb-q-a50c1ec8e8",
   "calibration_id": "cqr-73b58def25",
-  "input_hash": "294b06763e12c6b63fd6b599acb54e7bceb79321604a5b85facdec9f8963099c",
+  "input_hash": "936fcd322c8a3798b3227f64a4d9e428aea44fd702fee99a38db85a34a16c0c3",
   "result_hash": "6caff23218cabe02703ae89c8a5d72423ad644b5c6867d4278918faaad99fbe9",
   "execution_mode": "deterministic",
   "hours_outside_test_period": 0
@@ -701,7 +701,7 @@
    ],
    "changed_vs_previous": 0.0805,
    "update": {
-    "previous_id": "2026-02-17_635591cc",
+    "previous_id": "2026-02-17_458c4a8e",
     "previous_issue": "2026-02-17",
     "day": "2026-02-19",
     "common_hours": 24,
@@ -767,7 +767,7 @@
     "arguments": "{\"issue_date\": \"2026-02-18\"}",
     "output": "{\"measured_until\": \"2026-01-31 23:00:00\", \"window_hours\": 48, \"sources\": [{\"source\": \"ecmwf_ws10\", \"mae_ms\": 1.836, \"hours\": 721, \"missing_share\": 0.0, \"missing_hours_in_window\": 0}, {\"source\": \"best_match_ws100\", \"mae_ms\": 1.951, \"hours\": 721, \"missing_share\": 0.0, \"missing_hours_in_window\": 0}, {\"source\": \"cma_ws10\", \"mae_ms\": 2.178, \"hours\": 486, \"missing_share\": 0.326, \"missing_hours_in_window\": 0}, {\"source\": \"gem_ws10\", \"mae_ms\": 2.187, \"hours\": 721, \"missing_share\": 0.0, \"missing_hours_in_window\": 0}, {\"source\": \"icon_ws100\", \"mae_ms\": 2.211, \"hours\": 721, \"missing_share\": 0.0, \"missing_hours_in_window\": 0}, {\"source\": \"icon_ws10\", \"mae_ms\": 2.212, \"hours\": 721, \"missing_share\": 0.0, \"missing_hours_in_window\": 0}, {\"source\": \"gfs_ws10\", \"mae_ms\": 2.436, \"hours\": 721, \"missing_share\": 0.0, \"missing_hours_in_window\": 0}, {\"source\": \"ecmwf_ws100\", \"mae_ms\": 2.501, \"hours\": 721, \"missing_share\": 0.0, \"missing_hours_in_window\": 0}, {\"source\": \"jma_ws10\", \"mae_ms\": 2.572, \"hours\": 721, \"missing_share\": 0.0, \"missing_hours_in_window\": 0}, {\"source\": \"gfs_ws100\", \"mae_ms\": 3.3, \"hours\": 721, \"missing_share\": 0.0, \"missing_hours_in_window\": 0}]}",
     "ok": true,
-    "ms": 40
+    "ms": 36
    },
    {
     "type": "tool",
@@ -775,7 +775,7 @@
     "arguments": "{\"issue_date\": \"2026-02-18\", \"exclude_sources\": []}",
     "output": "{\"source\": \"Open-Meteo Previous Runs API (best_match)\", \"runs\": \"выпуск за 1 сут — 17 ч, выпуск за 2 сут — 24 ч, выпуск за 3 сут — 7 ч; задержка публикации 7 ч; все выпуски опубликованы не позже 2026-02-18 23:59\", \"leads_by_hour\": {\"2026-02-19T00:00\": 1, \"2026-02-19T01:00\": 1, \"2026-02-19T02:00\": 1, \"2026-02-19T03:00\": 1, \"2026-02-19T04:00\": 1, \"2026-02-19T05:00\": 1, \"2026-02-19T06:00\": 1, \"2026-02-19T07:00\": 1, \"2026-02-19T08:00\": 1, \"2026-02-19T09:00\": 1, \"2026-02-19T10:00\": 1, \"2026-02-19T11:00\": 1, \"2026-02-19T12:00\": 1, \"2026-02-19T13:00\": 1, \"2026-02-19T14:00\": 1, \"2026-02-19T15:00\": 1, \"2026-02-19T16:00\": 1, \"2026-02-19T17:00\": 2, \"2026-02-19T18:00\": 2, \"2026-02-19T19:00\": 2, \"2026-02-19T20:00\": 2, \"2026-02-19T21:00\": 2, \"2026-02-19T22:00\": 2, \"2026-02-19T23:00\": 2, \"2026-02-20T00:00\": 2, \"2026-02-20T01:00\": 2, \"2026-02-20T02:00\": 2, \"2026-02-20T03:00\": 2, \"2026-02-20T04:00\": 2, \"2026-02-20T05:00\": 2, \"2026-02-20T06:00\": 2, \"2026-02-20T07:00\": 2, \"2026-02-20T08:00\": 2, \"2026-02-20T09:00\": 2, \"2026-02-20T10:00\": 2, \"2026-02-20T11:00\": 2, \"2026-02-20T12:00\": 2, \"2026-02-20T13:00\": 2, \"2026-02-20T14:00\": 2, \"2026-02-20T15:00\": 2, \"2026-02-20T16:00\": 2, \"2026-02-20T17:00\": 3, \"2026-02-20T18:00\": 3, \"2026-02-20T19:00\": 3, \"2026-02-20T20:00\": 3, \"2026-02-20T21:00\": 3, \"2026-02-20T22:00\": 3, \"2026-02-20T23:00\": 3}, \"hours\": 48, \"missing_hours\": 0, \"wind_100m_mean\": 4.94, \"wind_100m_max\": 8.23, \"time_integrity\": {\"issued_at\": \"2026-02-18T23:59\", \"latest_weather_run\": \"2026-02-",
     "ok": true,
-    "ms": 73
+    "ms": 86
    },
    {
     "type": "tool",
@@ -783,7 +783,7 @@
     "arguments": "{\"issue_date\": \"2026-02-18\"}",
     "output": "{\"hours\": 48, \"features\": 26, \"missing_values\": 0, \"ens_ws100_mean\": 7.21, \"ens_spread_mean\": 2.31}",
     "ok": true,
-    "ms": 63
+    "ms": 66
    },
    {
     "type": "tool",
@@ -791,7 +791,7 @@
     "arguments": "{\"issue_date\": \"2026-02-18\"}",
     "output": "{\"hours\": 48, \"energy_d1\": 7.28, \"energy_d2\": 6.9, \"calibration\": \"split-conformal (CQR) по режимам ветра\", \"interval_coverage_check\": 0.775}",
     "ok": true,
-    "ms": 61
+    "ms": 56
    },
    {
     "type": "tool",
@@ -807,15 +807,15 @@
     "arguments": "{\"issue_date\": \"2026-02-18\"}",
     "output": "{\"flags\": [\"Высокая неопределённость: средняя ширина интервала p10–p90 = 0.66\", \"Модели погоды расходятся (разброс ветра 100 м в среднем 2.3 м/с) — прогноз менее надёжен\"], \"summary\": {\"energy_d1\": 7.28, \"energy_d2\": 6.9, \"peak_hour\": \"2026-02-20T21:00\", \"low_hours\": 3, \"interval_width\": 0.664}}",
     "ok": true,
-    "ms": 4
+    "ms": 6
    },
    {
     "type": "tool",
     "name": "compare_with_previous",
     "arguments": "{\"issue_date\": \"2026-02-18\"}",
-    "output": "{\"previous_id\": \"2026-02-17_635591cc\", \"previous_issue\": \"2026-02-17\", \"day\": \"2026-02-19\", \"common_hours\": 24, \"mean_abs_change\": 0.0805, \"max_abs_change\": 0.3142, \"energy_old\": 7.81, \"energy_new\": 7.28, \"hours_changed_10pp\": 7, \"changed_hours\": [\"2026-02-19T08:00\", \"2026-02-19T09:00\", \"2026-02-19T10:00\", \"2026-02-19T11:00\", \"2026-02-19T17:00\", \"2026-02-19T18:00\", \"2026-02-19T23:00\"], \"significant\": true, \"method\": \"сравнение сохранённых версий\"}",
+    "output": "{\"previous_id\": \"2026-02-17_458c4a8e\", \"previous_issue\": \"2026-02-17\", \"day\": \"2026-02-19\", \"common_hours\": 24, \"mean_abs_change\": 0.0805, \"max_abs_change\": 0.3142, \"energy_old\": 7.81, \"energy_new\": 7.28, \"hours_changed_10pp\": 7, \"changed_hours\": [\"2026-02-19T08:00\", \"2026-02-19T09:00\", \"2026-02-19T10:00\", \"2026-02-19T11:00\", \"2026-02-19T17:00\", \"2026-02-19T18:00\", \"2026-02-19T23:00\"], \"significant\": true, \"method\": \"сравнение сохранённых версий\"}",
     "ok": true,
-    "ms": 5
+    "ms": 7
    }
   ]
  }

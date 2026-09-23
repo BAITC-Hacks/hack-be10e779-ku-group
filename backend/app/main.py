@@ -49,7 +49,7 @@ async def unhandled(request: Request, exc: Exception):
 @app.get("/health", response_model=Health)
 def health() -> Health:
     return Health(status="ok", mode=LLMClient().mode, commit=settings.build_commit, model=forecast_api.warm["state"],
-                  llm_model=settings.llm_model)
+                  llm_model=settings.llm_model if LLMClient().mode == "live" else "")
 
 
 # роутеры подключаются здесь: app.include_router(<router>, prefix="/api")
