@@ -1,0 +1,2 @@
+# Скрипты запускаются в bash (Linux/macOS/WSL/Git Bash): всегда с LF, иначе «set: pipefail: invalid option name»
+*.sh text eol=lf
