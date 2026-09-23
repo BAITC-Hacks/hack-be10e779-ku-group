@@ -10,8 +10,7 @@ import { Badge, Card, Empty, Notice, Skeleton, Spinner } from '../../components/
 import { addDays, dateRu, dateShort, dateTime, num, pct } from '../../lib/format'
 import { daysBetween, ddmm, flagHead, int, mean, normalize, plural, type FebData } from './febData'
 import { FebCalendar } from './FebCalendar'
-import { FebBarsChart, FebFinalChart } from './FebChart'
-import { FebTable } from './FebTable'
+import { FebFinalChart } from './FebChart'
 import { FebDownloads } from './FebDownloads'
 import { AutonomousRun } from './AutonomousRun'
 import './february.css'
@@ -187,9 +186,6 @@ export default function FebruaryTab({ meta, theme, onOpenDate }: FebruaryTabProp
         <div className="feb-head-text">
           <h1 className="feb-title">Прогноз на период · {dateRu(addDays(meta.issue_range.first, 1))}–{dateRu(addDays(meta.issue_range.last, 1))}</h1>
           <p className="feb-lead">Сейчас доступен тестовый период из ТЗ — февраль 2026: история данных заканчивается 31.01.2026. В рабочем режиме период может быть любым.</p>
-          <p className="feb-lead">
-            {runLabel}: каждый делается вечером накануне по прогнозу погоды, известному на тот момент, — как будто будущее ещё неизвестно
-          </p>
         </div>
         {headAction && <div className="feb-head-actions">{headAction}</div>}
       </header>
@@ -199,7 +195,7 @@ export default function FebruaryTab({ meta, theme, onOpenDate }: FebruaryTabProp
         модели»
       </Notice>
 
-      <AutonomousRun onOpenDate={onOpenDate} />
+      {!(data && items.length > 0) && <AutonomousRun onOpenDate={onOpenDate} />}
 
       {load.state !== 'empty' && runPanel}
 
@@ -312,50 +308,29 @@ export default function FebruaryTab({ meta, theme, onOpenDate }: FebruaryTabProp
             />
           </div>
 
+          <AutonomousRun onOpenDate={onOpenDate} />
+
           <div className="feb-main">
             <Card eyebrow="Календарь" title="Прогноз на каждые сутки" className="feb-card-cal">
               <FebCalendar items={items} year={calYear} month={calMonth} onOpen={onOpenDate} />
             </Card>
-            <Card
-              eyebrow="Обзор месяца"
-              title="Выработка по дням, ч работы на полную мощность"
-              actions={<Badge tone="neutral">прогноз, не факт</Badge>}
-              className="feb-card-chart"
-            >
-              <FebBarsChart items={items} theme={theme} onOpen={onOpenDate} />
-              <div className="feb-legend small muted">
-                <span>
-                  <i className="feb-sw feb-sw--d1" /> прогноз, сделанный накануне
-                </span>
-                <span>
-                  <i className="feb-sw feb-sw--warn" /> есть предупреждения агента
-                </span>
-                {items.some((r) => r.energyD2 != null) && (
-                  <span>
-                    <i className="feb-sw feb-sw--d2" /> прогноз на тот же день, сделанный за 2 дня
-                  </span>
-                )}
-                <span>клик по столбцу — открыть прогноз</span>
-              </div>
-              {data.finalHours.length > 0 && (
-                <div className="feb-final">
-                  <div className="eyebrow">
-                    Весь февраль по часам · {int(data.finalHours.length)} ч · прогноз и вероятный диапазон, % от макс.
-                  </div>
-                  <FebFinalChart hours={data.finalHours} theme={theme} />
-                  <div className="small muted">Каждый час — из самого свежего прогноза (сделанного накануне).</div>
-                </div>
-              )}
-            </Card>
+            {data.finalHours.length > 0 && (
+              <Card
+                eyebrow="Весь февраль по часам"
+                title={`Мощность по часам · ${int(data.finalHours.length)} ч, % от макс.`}
+                actions={<Badge tone="neutral">прогноз, не факт</Badge>}
+                className="feb-card-chart"
+              >
+                <FebFinalChart hours={data.finalHours} theme={theme} />
+                <div className="small muted">Каждый час — из самого свежего прогноза (сделанного накануне), с вероятным диапазоном.</div>
+              </Card>
+            )}
           </div>
 
           <Card eyebrow="Выгрузка" title="CSV прогноза февраля">
             <FebDownloads runs={data.runs} />
           </Card>
 
-          <Card eyebrow="Прогнозы" title={`Все прогнозы · ${int(items.length)}`}>
-            <FebTable items={items} onOpen={onOpenDate} />
-          </Card>
         </div>
       )}
 

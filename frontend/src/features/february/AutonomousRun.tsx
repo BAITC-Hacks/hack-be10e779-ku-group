@@ -131,7 +131,10 @@ export function AutonomousRun(props: { onOpenDate: (date: string) => void }) {
   const recalcs = events.filter((e) => e.hours_with_fresher_weather > 0).length
   const isDone = run?.status === 'done'
   const busy = running || starting
-  const shown = [...events].reverse() // новые сверху
+  const [showAll, setShowAll] = useState(false)
+  const FEED_LIMIT = 5
+  const ordered = [...events].reverse() // новые сверху
+  const shown = showAll ? ordered : ordered.slice(0, FEED_LIMIT)
 
   // новая строка появилась во время прогона — прокручиваем ленту к началу, чтобы её было видно
   const feedRef = useRef<HTMLOListElement | null>(null)
@@ -214,7 +217,13 @@ export function AutonomousRun(props: { onOpenDate: (date: string) => void }) {
             </li>
           ))}
         </ol>
-      ) : (
+      ) : null}
+      {events.length > FEED_LIMIT ? (
+        <button type="button" className="btn btn-ghost btn-sm feb-auto-more" onClick={() => setShowAll((v) => !v)}>
+          {showAll ? 'Свернуть' : `Показать все ${events.length} ${plural(events.length, ['день', 'дня', 'дней'])}`}
+        </button>
+      ) : null}
+      {events.length > 0 ? null : (
         !busy &&
         !error && (
           <p className="small muted feb-auto-empty">

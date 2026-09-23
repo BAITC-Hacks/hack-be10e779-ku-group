@@ -189,3 +189,4 @@ button.feb-cell:hover { border-color: var(--border-strong); background: var(--pr
 .feb-auto-chip--error { color: var(--error); background: var(--error-bg); border-color: transparent; }
 .feb-auto-chip--card { color: var(--info); background: var(--info-bg); border-color: transparent; }
 .feb-auto-go { margin-left: auto; color: var(--text-3); flex: none; }
+.feb-auto-more { margin-top: 8px; }
