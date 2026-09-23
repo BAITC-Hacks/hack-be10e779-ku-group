@@ -1,0 +1,11 @@
+services:
+  app:
+    build:
+      context: .
+      args:
+        BUILD_COMMIT: ${BUILD_COMMIT:-dev}
+    env_file:
+      - path: .env
+        required: false
+    ports:
+      - "${APP_PORT:-8000}:8000"
