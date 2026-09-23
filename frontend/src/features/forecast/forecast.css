@@ -267,11 +267,7 @@
 .fc-map-card .notice { margin-top: 10px; }
 .fc-map-card .card-head { flex-wrap: wrap; }
 .fc-map-wrap { position: relative; }
-.fc-map-hint {
-  position: absolute; left: 10px; bottom: 8px; z-index: 500; pointer-events: none;
-  font-size: 11px; color: var(--text-2); background: var(--surface-solid); border: 1px solid var(--border);
-  border-radius: 6px; padding: 2px 8px; max-width: calc(100% - 140px);
-}
+.fc-map-hint { margin-top: 6px; font-size: 11px; color: var(--text-3); }
 .fc-map-text { margin-top: 12px; font-size: 13px; color: var(--text-2); }
 .fc-map-text p { margin: 0 0 10px; }
 .fc-map-on { color: var(--ok); }
@@ -317,3 +313,11 @@
 .fc-todo-text { font-size: 13px; color: var(--text-2); margin-top: 2px; }
 .fc-todo-action { font-size: 13px; font-weight: 600; color: var(--warn); margin-top: 4px; }
 .fc-todo-none { display: flex; align-items: center; gap: 8px; color: var(--ok); margin: 8px 0 0; }
+
+/* узлы погодных моделей и метка станции на карте */
+.fc-node {
+  display: grid; box-sizing: border-box; place-items: center; border-radius: 50%; font: 600 11px/1 var(--mono);
+  color: var(--text); background: var(--surface-solid); border: 2px solid var(--wind);
+}
+.fc-node-off { border-style: dashed; border-color: var(--text-3); color: var(--text-3); }
+.fc-legend-node { display: inline-grid; width: 16px; height: 16px; font-size: 9px; font-style: normal; border-width: 1.5px; vertical-align: -3px; }

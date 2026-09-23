@@ -31,3 +31,12 @@ export type AboutModalProps = {
   meta: Meta
   health: Health | null
 }
+
+export type TabId = 'forecast' | 'february' | 'quality' | 'project'
+
+export type ProjectTabProps = {
+  meta: Meta
+  health: Health | null
+  metrics: Metrics | null
+  onOpenTab: (t: TabId) => void
+}

@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { Info, Moon, Sun } from 'lucide-react'
 import { getHealth, getMeta, getMetrics } from './api/endpoints'
 import type { Health, Meta, Metrics } from './api/types'
-import type { Theme } from './app/shared'
+import type { TabId, Theme } from './app/shared'
 import { Badge, Notice, Spinner } from './components/ui'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import { SiteFooter } from './components/SiteFooter'
@@ -13,13 +13,15 @@ import ForecastTab from './features/forecast/ForecastTab'
 import FebruaryTab from './features/february/FebruaryTab'
 import QualityTab from './features/quality/QualityTab'
 import AboutModal from './features/about/AboutModal'
+import ProjectTab from './features/project/ProjectTab'
 import './App.css'
 
-type Tab = 'forecast' | 'february' | 'quality'
+type Tab = TabId
 const TABS: { id: Tab; label: string }[] = [
   { id: 'forecast', label: 'Прогноз' },
   { id: 'february', label: 'Февраль 2026' },
   { id: 'quality', label: 'Качество модели' },
+  { id: 'project', label: 'О проекте' },
 ]
 
 function initialTheme(): Theme {
@@ -85,6 +87,11 @@ export default function App() {
     connect()
     loadMetrics()
   }, [connect, loadMetrics])
+
+  const openTab = useCallback((t: TabId) => {
+    setTab(t)
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }, [])
 
   const openForecast = useCallback((d: string) => {
     setIssueDate(d)
@@ -194,6 +201,11 @@ export default function App() {
               metricsError={metricsError}
               onReload={loadMetrics}
             />
+          </ErrorBoundary>
+        </div>
+        <div hidden={tab !== 'project'}>
+          <ErrorBoundary name="О проекте">
+            <ProjectTab meta={meta} health={health} metrics={metrics} onOpenTab={openTab} />
           </ErrorBoundary>
         </div>
       </main>

@@ -2,12 +2,12 @@
 // Во время запроса прогресс по этапам не выдумываем: все этапы в состоянии «агент работает», шаги — после ответа.
 
 import { useState } from 'react'
-import { Bot, Check, ChevronDown, CircleCheck, CircleX, Download, Info, RotateCcw, Wrench, X } from 'lucide-react'
+import { Bot, Check, ChevronDown, CircleCheck, CircleX, Info, RotateCcw, Wrench, X } from 'lucide-react'
 import type { AgentStep, Forecast, Mode } from '../../api/types'
 import { Badge, Spinner } from '../../components/ui'
 import { dateRu, ms } from '../../lib/format'
 import { prettyMaybeJson, stageStatus, STAGES, toolInfo } from '../../lib/steps'
-import { downloadJson, prettyDates } from './model'
+import { prettyDates } from './model'
 
 type LogState = 'idle' | 'running' | 'ready'
 
@@ -70,22 +70,6 @@ export function AgentLog(props: {
               </>
             )}
           </div>
-          <button
-            type="button"
-            className="btn btn-sm"
-            onClick={() =>
-              downloadJson(`agent-log-${f.issue_date}.json`, {
-                issue_date: f.issue_date,
-                issued_at: f.issued_at,
-                mode: f.mode,
-                fallback: f.fallback ?? null,
-                computed_at: f.computed_at ?? null,
-                steps: f.steps,
-              })
-            }
-          >
-            <Download size={14} /> Скачать журнал (JSON)
-          </button>
           {sumMs === 0 && total.length > 0 && (
             <p className="fc-log-note">Длительность отдельных шагов не измерялась.</p>
           )}

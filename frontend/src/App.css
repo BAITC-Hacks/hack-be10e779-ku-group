@@ -43,3 +43,8 @@
   .topbar-right { gap: 4px; }
   .tab { padding: 0 10px; font-size: 13px; }
 }
+
+/* вкладок стало 4: на узких экранах — одна прокручиваемая строка без переносов */
+.tab { white-space: nowrap; flex: none; }
+.tabs { scrollbar-width: none; }
+.tabs::-webkit-scrollbar { display: none; }

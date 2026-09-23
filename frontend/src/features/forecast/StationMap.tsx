@@ -12,17 +12,20 @@ import { cssVar } from '../../lib/theme'
 import type { ObjectId } from './model'
 
 // Узлы сетки — latitude/longitude из ответов Open-Meteo, сохранённых в data/weather/*.json.
-const WEATHER_NODES: { id: string; short: string; label: string; lat: number; lon: number }[] = [
-  { id: 'best_match', short: 'Open-Meteo', label: 'Open-Meteo — лучшая модель для точки', lat: 43.620384, lon: 78.47891 },
-  { id: 'ecmwf', short: 'ECMWF', label: 'ECMWF (Европа)', lat: 43.75, lon: 78.5 },
-  { id: 'icon', short: 'ICON', label: 'ICON (Германия)', lat: 43.625, lon: 78.5 },
-  { id: 'gfs', short: 'GFS', label: 'GFS (США)', lat: 43.638138, lon: 78.515625 },
-  { id: 'jma', short: 'JMA', label: 'JMA (Япония)', lat: 43.5, lon: 78.5 },
-  { id: 'cma', short: 'CMA', label: 'CMA (Китай)', lat: 43.6875, lon: 78.5 },
-  { id: 'gem', short: 'GEM', label: 'GEM (Канада)', lat: 43.65001, lon: 78.600006 },
+// Высоты ветра — как в backend/app/forecast/weather.py (у JMA, CMA и GEM в архиве только ветер на 10 м).
+const WEATHER_NODES: { id: string; short: string; label: string; heights: string; lat: number; lon: number }[] = [
+  { id: 'best_match', short: 'Open-Meteo', label: 'Open-Meteo — автовыбор лучшей модели для точки', heights: '10 и 100 м', lat: 43.620384, lon: 78.47891 },
+  { id: 'ecmwf', short: 'ECMWF', label: 'ECMWF (Европа)', heights: '10 и 100 м', lat: 43.75, lon: 78.5 },
+  { id: 'icon', short: 'ICON', label: 'ICON (Германия)', heights: '10 и 100 м', lat: 43.625, lon: 78.5 },
+  { id: 'gfs', short: 'GFS', label: 'GFS (США)', heights: '10 и 100 м', lat: 43.638138, lon: 78.515625 },
+  { id: 'jma', short: 'JMA', label: 'JMA (Япония)', heights: 'только 10 м', lat: 43.5, lon: 78.5 },
+  { id: 'cma', short: 'CMA', label: 'CMA (Китай)', heights: 'только 10 м', lat: 43.6875, lon: 78.5 },
+  { id: 'gem', short: 'GEM', label: 'GEM (Канада)', heights: 'только 10 м', lat: 43.65001, lon: 78.600006 },
 ]
 
 type View = 'station' | 'weather'
+
+const NEAR_KM = 8
 
 function km(a: [number, number], b: [number, number]): number {
   const R = 6371
@@ -120,20 +123,33 @@ export function StationMap(props: {
     if (view === 'weather') {
       const wind = cssVar('--wind')
       const text3 = cssVar('--text-3')
-      for (const n of nodes) {
+      nodes.forEach((n, i) => {
         const off = n.off.length > 0
         L.polyline([center, [n.lat, n.lon]], { color: off ? text3 : wind, weight: 1, dashArray: '4 4', opacity: 0.7 }).addTo(g)
-        L.circleMarker([n.lat, n.lon], {
-          radius: 7,
-          color: off ? text3 : wind,
-          weight: 2,
-          dashArray: off ? '3 3' : undefined,
-          fillColor: off ? 'transparent' : wind,
-          fillOpacity: 0.4,
+        L.marker([n.lat, n.lon], {
+          icon: L.divIcon({ className: `fc-node${off ? ' fc-node-off' : ''}`, html: String(i + 1), iconSize: [22, 22] }),
+          keyboard: false,
         })
-          .bindTooltip(`${esc(n.short)} · ${num(n.dist)} км`, { permanent: true, direction: 'top', className: 'fc-map-label' })
+          .bindTooltip(`<b>${i + 1}. ${esc(n.label)}</b><br/>${num(n.dist)} км от станции · ветер ${esc(n.heights)}`, {
+            direction: 'top',
+            offset: [0, -10],
+          })
+          .addTo(g)
+      })
+      // обе турбины — точками своих цветов, без постоянных подписей (338 м друг от друга; номера узлов поверх)
+      for (const t of turbines) {
+        L.circleMarker([t.lat, t.lon], {
+          radius: 6,
+          color: cssVar(t.id === 't1' ? '--t1' : '--t2'),
+          weight: 2,
+          fillColor: cssVar(t.id === 't1' ? '--t1' : '--t2'),
+          fillOpacity: 0.9,
+        })
+          .bindTooltip(t.id === 't1' ? 'Турбина 1' : 'Турбина 2', { direction: 'top', offset: [0, -6] })
+          .on('click', () => onPick.current(t.id))
           .addTo(g)
       }
+      return
     }
 
     for (const t of turbines) {
@@ -166,13 +182,16 @@ export function StationMap(props: {
     if (view === 'station') {
       m.setView(center, 15)
     } else {
-      const pts: [number, number][] = [center, ...nodes.map((n) => [n.lat, n.lon] as [number, number])]
-      m.fitBounds(L.latLngBounds(pts), { padding: [40, 40] })
+      // ближний круг (до 8 км) — чтобы соседние узлы не слипались; дальние видны при отдалении
+      const near = nodes.filter((n) => n.dist < NEAR_KM)
+      const pts: [number, number][] = [center, ...near.map((n) => [n.lat, n.lon] as [number, number])]
+      m.fitBounds(L.latLngBounds(pts), { padding: [28, 28], maxZoom: 13 })
     }
   }, [view, center, nodes])
 
   const gap = turbines.length === 2 ? km([turbines[0].lat, turbines[0].lon], [turbines[1].lat, turbines[1].lon]) : null
   const nearest = nodes[0]
+  const far = nodes.filter((n) => n.dist >= NEAR_KM)
 
   return (
     <section className="card fc-map-card" aria-label="Станция на карте">
@@ -196,7 +215,16 @@ export function StationMap(props: {
 
       <div className="fc-map-wrap">
         <div ref={box} className="fc-map" />
-        <div className="fc-map-hint">Приблизить: «+», двойной клик или колесо мыши после клика по карте</div>
+      </div>
+      <div className="fc-map-hint">
+        {view === 'weather' && (
+          <>
+            <i className="fc-map-dot" style={{ background: 'var(--t1)' }} /> Т1{' '}
+            <i className="fc-map-dot" style={{ background: 'var(--t2)' }} /> Т2 · <i className="fc-node fc-legend-node">1</i> узел погодной
+            модели (пунктир — исключён агентом) ·{' '}
+          </>
+        )}
+        приблизить: «+», двойной клик или колесо мыши после клика по карте
       </div>
 
       {view === 'station' ? (
@@ -209,23 +237,29 @@ export function StationMap(props: {
           <p>
             Прогноз погоды считают не для каждой точки, а на сетке: у каждой погодной модели свой ближайший к станции узел
             {nearest ? ` (самый близкий — ${nearest.short}, ${num(nearest.dist)} км)` : ''}. Агент берёт прогноз ветра из
-            7 моделей и отбрасывает те, у которых нет данных на нужные часы (больше 4 ч пропусков). Чем сильнее модели
+            7 источников — 6 моделей мировых метеоцентров и автовыбор Open-Meteo — и отбрасывает те, у которых нет данных на
+            нужные часы (больше 4 ч пропусков). Номер на карте = строка в таблице
+            {far.length > 0 && ` (${far.map((n) => n.short).join(' и ')} — дальше ${NEAR_KM} км, отдалите карту)`}. Чем сильнее модели
             расходятся между собой, тем шире интервал неуверенности на графике.
           </p>
           <div className="table-wrap">
             <table className="data">
               <thead>
                 <tr>
-                  <th>Погодная модель</th>
+                  <th>№</th>
+                  <th>Источник прогноза погоды</th>
                   <th className="r">До станции</th>
+                  <th>Ветер</th>
                   <th>В этом прогнозе</th>
                 </tr>
               </thead>
               <tbody>
-                {nodes.map((n) => (
+                {nodes.map((n, i) => (
                   <tr key={n.id}>
+                    <td className="mono">{i + 1}</td>
                     <td>{n.label}</td>
                     <td className="r">{num(n.dist)} км</td>
+                    <td>{n.heights}</td>
                     <td>
                       {!f ? (
                         <span className="muted">—</span>

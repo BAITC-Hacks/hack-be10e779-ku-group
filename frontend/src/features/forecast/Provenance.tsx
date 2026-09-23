@@ -72,7 +72,7 @@ export function Provenance(props: { f: Forecast }) {
         <span className="fc-prov-note">{BY_DEFINITION}</span>
       </div>
       <Badge tone="neutral" icon={<CloudSun size={14} />} title={`${f.weather_source}\n${f.weather_runs}`}>
-        <span className="fc-wrap">Погода: архив прогнозов Open-Meteo, 7 мировых моделей</span>
+        <span className="fc-wrap">Погода: архив Open-Meteo, 7 источников прогноза</span>
       </Badge>
       {excluded.length > 0 && (
         <Badge tone="info" icon={<Filter size={14} />} title="Источники погоды, которые агент исключил: пропуски данных на часы прогноза (подробно — в шаге «Оценка источников погоды»)">
