@@ -91,7 +91,7 @@ export default function ProjectTab(props: ProjectTabProps) {
         <div className="pj-hero-text">
           <div className="eyebrow">{t('project.hero.eyebrow')}</div>
           <h1>
-            Анемо
+            {t('app.brand.name')}
             <span>{t('project.hero.tagline')}</span>
           </h1>
           <p>{t('project.hero.lead')}</p>

@@ -19,6 +19,10 @@ class Settings(BaseSettings):
     ai_cache_dir: Path = ROOT_DIR / "data" / "ai-cache"
     static_dir: Path = ROOT_DIR / "frontend" / "dist"
     build_commit: str = "dev"
+    # авторизация: действия (прогноз, прогоны, станции) — по ролям; чтение открыто. Тестовые учётки — в README.
+    auth_required: bool = True
+    auth_secret: str = "change-me-in-production"
+    auth_users: str = "admin:admin123:admin,analyst:analyst123:analyst,dispatcher:dispatcher123:dispatcher"
 
     @property
     def live(self) -> bool:

@@ -8,7 +8,7 @@ const en: Dict<typeof ru> = {
     lead:
       'The dispatcher picks a date, and the agent does the rest: it pulls weather forecasts from 7 sources (6 models from global weather centres plus Open-Meteo’s auto-selection), runs the model, checks the result and explains how much energy to expect, where the peaks and dips are, and which hours need reserve.',
     openForecast: 'Open forecast',
-    allFebruary: 'All of February',
+    allFebruary: 'Period forecast',
   },
   stats: {
     error: 'average error of the next-day forecast, as a share of maximum power',
@@ -28,7 +28,7 @@ const en: Dict<typeof ru> = {
   },
   agent: {
     title: 'What the AI agent does',
-    lead: 'The agent runs the full cycle on its own — 7 steps, each a tool. In **LIVE** mode, an LLM chooses the order of steps and makes decisions (such as excluding a weather source) via tool calls. In **DEMO** mode, without an API key, a planner runs the same cycle by the same rules. **The LLM never makes up numbers** — code computes everything; the agent drives the steps and explains the result.',
+    lead: 'The agent runs the full cycle on its own — 7 steps, each a tool. In **LIVE** mode, an LLM chooses the order of steps and makes decisions (such as excluding a weather source) via tool calls. In **review mode** (no API key), a planner runs the same cycle by the same rules. **The LLM never makes up numbers** — code computes everything; the agent drives the steps and explains the result.',
     passport:
       'Every run is saved as an immutable version with a “passport”: which data and weather issues were used, model and calibration versions, and input and output hashes.',
   },
@@ -84,7 +84,7 @@ const en: Dict<typeof ru> = {
     noActualWeather: 'Actual weather for the forecast days and reanalysis are never used.',
     test: 'A code test goes through every weather issue used and checks that it was published before the forecast time.',
     noFebruaryActuals: 'There is no actual output data for February, so the interface shows only forecasts for February — no made-up “actuals”.',
-    modeLabel: 'DEMO / LIVE mode is always labelled: recorded responses are never passed off as live LLM output.',
+    modeLabel: 'The mode (LIVE or review mode without a key) is always labelled: recorded responses are never passed off as live LLM output.',
   },
   roadmap: {
     title: 'What’s next',
@@ -129,8 +129,8 @@ const en: Dict<typeof ru> = {
     version: 'Version',
     build: 'Server build',
     agentMode: 'Agent mode',
-    demo: 'DEMO · no LLM',
-    period: 'Forecast period',
+    demo: 'Review mode (no key)',
+    period: 'Forecasts for the period',
     history: 'Data history',
     stackTitle: 'Tech stack',
     stack: {

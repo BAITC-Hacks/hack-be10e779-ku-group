@@ -78,7 +78,7 @@ export default {
     build: 'Сборка',
     mode: 'Режим',
     server: 'Сервер',
-    demo: 'DEMO · без LLM',
+    demo: 'Режим проверки (без ключа)',
     offline: 'Нет связи с сервером — версия и режим неизвестны.',
   },
 } as const

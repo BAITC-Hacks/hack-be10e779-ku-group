@@ -90,7 +90,7 @@ function ModeBadge(props: { f: Forecast | null; metaMode: Mode; llmModel: string
   if (!f) {
     return (
       <Badge tone="neutral" title={t('forecast.log.modeServerTitle')}>
-        {props.metaMode === 'live' ? 'LIVE' : 'DEMO'}
+        {props.metaMode === 'live' ? 'LIVE' : t('forecast.log.checkShort')}
       </Badge>
     )
   }

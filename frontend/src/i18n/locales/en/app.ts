@@ -6,7 +6,7 @@ const en: Dict<typeof ru> = {
   tabs: {
     aria: 'Sections',
     forecast: 'Forecast',
-    february: 'February 2026',
+    february: 'Period forecast',
     quality: 'Model quality',
     project: 'About the project',
   },
@@ -18,9 +18,12 @@ const en: Dict<typeof ru> = {
   mode: {
     liveTitle: 'An LLM decides the steps by calling tools. All numbers are computed by code.',
     demoTitle:
-      'No LLM key set: the same loop is run by a deterministic planner. Weather, model and calculations are real.',
+      'Review mode for the expert: no LLM key needed, the same loop is run by a deterministic planner. Weather, model and calculations are real.',
     withoutLlm: 'no LLM',
+    check: 'Review mode',
+    noKey: '(no key)',
   },
+  rollingWindow: 'rolling window',
   connecting: 'Connecting…',
   about: 'About the system',
   theme: {

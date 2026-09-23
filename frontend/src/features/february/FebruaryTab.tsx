@@ -1,4 +1,4 @@
-// Вкладка «Февраль 2026» — ретроспективный прогон: 28 выпусков (D 23:59) → прогноз на D+1 и D+2, весь февраль.
+// Вкладка «Прогноз на период» (сейчас — тестовый период ТЗ, февраль 2026) — ретроспективный прогон: 28 выпусков (D 23:59) → прогноз на D+1 и D+2, весь февраль.
 // Данные: GET /api/backtest (v2, готовые CSV; в v1 эндпоинта нет → null) и POST /api/backtest (полный прогон, перезапись CSV).
 // Факта за февраль нет — здесь только прогнозы. Вкладка не размонтируется (App прячет её через hidden), состояние живёт здесь.
 
@@ -11,9 +11,9 @@ import { addDays, dateRu, dateShort, dateTime, int, num, pct } from '../../lib/f
 import { useT } from '../../i18n'
 import { daysBetween, ddmm, flagHead, mean, normalize, type FebData } from './febData'
 import { FebCalendar } from './FebCalendar'
-import { FebBarsChart, FebFinalChart } from './FebChart'
-import { FebTable } from './FebTable'
+import { FebFinalChart } from './FebChart'
 import { FebDownloads } from './FebDownloads'
+import { AutonomousRun } from './AutonomousRun'
 import './february.css'
 
 type Load =
@@ -189,13 +189,20 @@ export default function FebruaryTab({ meta, theme, onOpenDate }: FebruaryTabProp
     <div className="feb">
       <header className="feb-head">
         <div className="feb-head-text">
-          <h1 className="feb-title">{t('february.title')}</h1>
-          <p className="feb-lead">{t('february.lead', { runs: runLabel })}</p>
+          <h1 className="feb-title">
+            {t('february.periodTitle', {
+              from: dateRu(addDays(meta.issue_range.first, 1)),
+              to: dateRu(addDays(meta.issue_range.last, 1)),
+            })}
+          </h1>
+          <p className="feb-lead">{t('february.periodLead')}</p>
         </div>
         {headAction && <div className="feb-head-actions">{headAction}</div>}
       </header>
 
       <Notice tone="info">{t('february.noActual')}</Notice>
+
+      {!(data && items.length > 0) && <AutonomousRun onOpenDate={onOpenDate} />}
 
       {load.state !== 'empty' && runPanel}
 
@@ -309,48 +316,29 @@ export default function FebruaryTab({ meta, theme, onOpenDate }: FebruaryTabProp
             />
           </div>
 
+          <AutonomousRun onOpenDate={onOpenDate} />
+
           <div className="feb-main">
             <Card eyebrow={t('february.cal.eyebrow')} title={t('february.cal.title')} className="feb-card-cal">
               <FebCalendar items={items} year={calYear} month={calMonth} onOpen={onOpenDate} />
             </Card>
-            <Card
-              eyebrow={t('february.chart.eyebrow')}
-              title={t('february.chart.title')}
-              actions={<Badge tone="neutral">{t('february.chart.badge')}</Badge>}
-              className="feb-card-chart"
-            >
-              <FebBarsChart items={items} theme={theme} onOpen={onOpenDate} />
-              <div className="feb-legend small muted">
-                <span>
-                  <i className="feb-sw feb-sw--d1" /> {t('february.chart.legendD1')}
-                </span>
-                <span>
-                  <i className="feb-sw feb-sw--warn" /> {t('february.chart.legendWarn')}
-                </span>
-                {items.some((r) => r.energyD2 != null) && (
-                  <span>
-                    <i className="feb-sw feb-sw--d2" /> {t('february.chart.legendD2')}
-                  </span>
-                )}
-                <span>{t('february.chart.legendClick')}</span>
-              </div>
-              {data.finalHours.length > 0 && (
-                <div className="feb-final">
-                  <div className="eyebrow">{t('february.chart.finalTitle', { n: int(data.finalHours.length) })}</div>
-                  <FebFinalChart hours={data.finalHours} theme={theme} />
-                  <div className="small muted">{t('february.chart.finalHint')}</div>
-                </div>
-              )}
-            </Card>
+            {data.finalHours.length > 0 && (
+              <Card
+                eyebrow={t('february.final.eyebrow')}
+                title={t('february.final.title', { n: int(data.finalHours.length) })}
+                actions={<Badge tone="neutral">{t('february.chart.badge')}</Badge>}
+                className="feb-card-chart"
+              >
+                <FebFinalChart hours={data.finalHours} theme={theme} />
+                <div className="small muted">{t('february.final.hint')}</div>
+              </Card>
+            )}
           </div>
 
           <Card eyebrow={t('february.dl.eyebrow')} title={t('february.dl.title')}>
             <FebDownloads runs={data.runs} />
           </Card>
 
-          <Card eyebrow={t('february.table.eyebrow')} title={t('february.table.title', { n: int(items.length) })}>
-            <FebTable items={items} onOpen={onOpenDate} />
-          </Card>
         </div>
       )}
 

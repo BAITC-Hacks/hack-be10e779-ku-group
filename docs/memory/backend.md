@@ -132,3 +132,15 @@
 - 15:49 · результат · средний MAE по всем месяцам и горизонтам снизился с 0,1546 до 0,1526, но устойчивости нет: критерий выполнен только в октябре и январе, а в ноябре и декабре D+2 ухудшился. **Решение: не брать**, `model.py` не менять.
 - 15:55 · эксперимент · пространственные признаки (8 точек ±0.25/0.5°, тот же выпуск): градиенты давления + «гора − станция» 0.1564 (хуже, 1 из 4); кольцо ветра 0.1529 (2 из 4) — не брать. Код: backend/experiments/spatial_exp.py, данные data/weather/spatial/.
 - итог 16:00 · проверено 10 гипотез, принят только ансамбль погоды (−11 %). Модель на потолке данных NWP.
+
+## Агент в реальном времени (16:05, Максим)
+- решение · `weather.fetch_window` — агент САМ запрашивает Open-Meteo Previous Runs по координатам на окно выпуска (7 источников, выпуски 1–3 сут), подставляет в рабочие таблицы, считает хеш снимка и сверку с архивом; нет сети → откат на `data/weather/` с пометкой. `WEATHER_ONLINE=0` — только архив. ~4 с на выпуск. Сверка: полученное совпадает с архивом до 0.0 (прошлые выпуски NWP неизменны).
+- решение · в ответе прогноза поле `weather_retrieval` {origin network|archive|mixed, network_ok, archive_fallback, input_updated, snapshot_hash, sources[]}.
+- решение · `agent.autonomous_run` + `POST/GET /api/autonomous-run` (фон, 409 если идёт): по дням выпуска агент проверяет, вышел ли для уже спрогнозированных часов более свежий выпуск погоды (weather_run_days уменьшился) → пересчёт, новая версия, пересмотр. Событие: {issue_date, decision, hours_with_fresher_weather, weather_origin, forecast_id, energy_d1, revision{…}, cards[], validation_ok, mode, ms}. ~10 с на день.
+- решение · режим без ключа остаётся: п. 5.4.16 (не запустилось по README — не допускается) и п. 5.6.6 (проверка без личных ключей). LIVE — основной (деплой с ключом), без ключа — «режим проверки для эксперта».
+
+## Авторизация и станции (16:40, Максим)
+- решение · `app/auth.py`: роли dispatcher < analyst < admin, HMAC-токен 12 ч. GET открыты; POST /api/forecast — dispatcher+, /api/backtest и /api/autonomous-run — analyst+, станции/турбины/история — admin. Тестовые учётки (п. 5.6.6): admin/admin123, analyst/analyst123, dispatcher/dispatcher123. AUTH_REQUIRED=0 отключает проверку (так в тестах).
+- решение · POST /api/auth/login {username,password} → {token, user{username,role}, expires_in}; GET /api/auth/me; заголовок `Authorization: Bearer <token>`; 401 — нет входа, 403 — мало прав.
+- решение · `app/api/stations.py`, таблицы stations/turbines: GET /api/stations (станция кейса сидится при старте); POST /api/stations, POST /api/stations/{id}/turbines, POST /api/turbines/{id}/history (CSV организатора, проверка столбцов/шага/мощности, файл в data/uploads/). Обучение новой станции в этой версии НЕ выполняется — это видно в статусе станции.
+- находка · `weather_retrieval` отрезался схемой Forecast (сообщила Оксана) → поле добавлено в schemas.py, GET /api/forecast/{date} его отдаёт.

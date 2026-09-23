@@ -2,11 +2,12 @@
 // Контракт v2 — time_integrity; v1 — только issued_at/weather_runs (нейтральный бейдж). Проверка — по правилу архива
 // Open-Meteo (выпуск за 1–3 суток до часа) плюс расчётная задержка публикации, а не по журналу публикаций — так и подписываем.
 
+import { useState } from 'react'
 import { CloudSun, Filter, Shield, ShieldAlert, ShieldCheck } from 'lucide-react'
-import type { Forecast } from '../../api/types'
+import type { Forecast, WeatherRetrieval } from '../../api/types'
 import { Badge } from '../../components/ui'
 import { rich } from './rich'
-import { dateTime } from '../../lib/format'
+import { dateTime, num } from '../../lib/format'
 import { tr, useT } from '../../i18n'
 
 /** "gfs_ws100" → «GFS (ветер 100 м)». */
@@ -67,15 +68,92 @@ export function Provenance(props: { f: Forecast }) {
         {integrity}
         <span className="fc-prov-note">{BY_DEFINITION}</span>
       </div>
-      <Badge tone="neutral" icon={<CloudSun size={14} />} title={`${f.weather_source}\n${f.weather_runs}`}>
-        <span className="fc-wrap">{t('forecast.prov.source')}</span>
-      </Badge>
+      {f.weather_retrieval ? (
+        <Retrieval r={f.weather_retrieval} />
+      ) : (
+        <Badge tone="neutral" icon={<CloudSun size={14} />} title={`${f.weather_source}\n${f.weather_runs}`}>
+          <span className="fc-wrap">{t('forecast.prov.source')}</span>
+        </Badge>
+      )}
       {excluded.length > 0 && (
         <Badge tone="info" icon={<Filter size={14} />} title={t('forecast.prov.excludedTitle')}>
           <span className="fc-wrap">
             {t('forecast.prov.excluded', { list: excluded.map(prettySource).join(', ') })}
           </span>
         </Badge>
+      )}
+    </div>
+  )
+}
+
+/** Как агент получил погоду: по сети или из локального архива (weather_retrieval). По клику — таблица источников. */
+function Retrieval(props: { r: WeatherRetrieval }) {
+  const { r } = props
+  const { t } = useT()
+  const [open, setOpen] = useState(false)
+  const n = r.sources.length
+  const hash = r.snapshot_hash ? r.snapshot_hash.slice(0, 8) : null
+  const label =
+    r.origin === 'network'
+      ? t('forecast.retrieval.network', { sources: t('forecast.retrieval.sources', { count: n }) })
+      : r.origin === 'archive'
+        ? t('forecast.retrieval.archive', { sources: t('forecast.retrieval.sources', { count: n }) })
+        : t('forecast.retrieval.mixed', { network: r.network_ok, archive: r.archive_fallback })
+  return (
+    <div className="fc-retr">
+      <button
+        type="button"
+        className={`badge ${r.origin === 'network' ? 'badge-ok' : 'badge-warn'} fc-retr-btn`}
+        aria-expanded={open}
+        onClick={() => setOpen((o) => !o)}
+        title={t('forecast.retrieval.showSources')}
+      >
+        <CloudSun size={14} />
+        <span className="fc-wrap">
+          {label}
+          {hash && rich(t('forecast.retrieval.snapshot'), { hash: <span className="mono">{hash}</span> })}
+        </span>
+      </button>
+      {open && (
+        <div className="table-wrap fc-retr-table">
+          <table className="data">
+            <thead>
+              <tr>
+                <th>{t('forecast.retrieval.colSource')}</th>
+                <th>{t('forecast.retrieval.colOrigin')}</th>
+                <th className="r">{t('forecast.retrieval.colHours')}</th>
+                <th className="r" title={t('forecast.retrieval.colCheckTitle')}>
+                  {t('forecast.retrieval.colCheck')}
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {r.sources.map((s) => (
+                <tr key={s.source}>
+                  <td className="mono">{s.source}</td>
+                  <td>
+                    {s.origin === 'network'
+                      ? t('forecast.retrieval.originNetwork')
+                      : s.reason
+                        ? t('forecast.retrieval.originArchiveReason', { reason: s.reason })
+                        : t('forecast.retrieval.originArchive')}
+                  </td>
+                  <td className="r">{s.hours ?? '—'}</td>
+                  <td className="r">
+                    {s.max_abs_diff_vs_archive == null
+                      ? '—'
+                      : t('forecast.retrieval.diff', { value: num(s.max_abs_diff_vs_archive, 2) })}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          {r.input_updated != null && (
+            <p className="small muted">
+              {r.input_updated ? t('forecast.retrieval.updated') : t('forecast.retrieval.same')}
+            </p>
+          )}
+        </div>
       )}
     </div>
   )

@@ -79,7 +79,7 @@ const en: Dict<typeof ru> = {
     build: 'Build',
     mode: 'Mode',
     server: 'Server',
-    demo: 'DEMO · no LLM',
+    demo: 'Review mode (no key)',
     offline: 'No connection to the server — version and mode unknown.',
   },
 }

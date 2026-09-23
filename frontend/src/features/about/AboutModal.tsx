@@ -155,7 +155,7 @@ export default function AboutModal(props: AboutModalProps) {
                 </p>
               </div>
               <div className="ab-mode">
-                <Badge tone="demo">DEMO</Badge>
+                <Badge tone="demo">{t('about.version.demo')}</Badge>
                 <p>{t('about.cycle.demo')}</p>
               </div>
             </div>
