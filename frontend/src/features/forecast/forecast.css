@@ -6,28 +6,35 @@
 .fc-layout {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  grid-template-areas: 'ctrl' 'prov' 'kpi' 'chart' 'log' 'notes' 'table';
+  grid-template-areas: 'intro' 'ctrl' 'verdict' 'prov' 'kpi' 'chart' 'log' 'map' 'notes' 'table';
   column-gap: 16px;
   row-gap: 0;
 }
 .fc-layout > * { margin-bottom: 16px; min-width: 0; }
+.fc-area-intro { grid-area: intro; }
+.fc-area-intro:empty { display: none; }
+.fc-area-verdict { grid-area: verdict; }
 .fc-area-ctrl { grid-area: ctrl; }
 .fc-area-prov { grid-area: prov; }
 .fc-area-kpi { grid-area: kpi; }
 .fc-area-chart { grid-area: chart; }
 .fc-area-log { grid-area: log; }
+.fc-area-map { grid-area: map; }
 .fc-area-notes { grid-area: notes; }
 .fc-area-table { grid-area: table; }
 
 @media (min-width: 1280px) {
   .fc-layout {
     grid-template-columns: minmax(0, 1fr) 380px;
-    grid-template-rows: repeat(6, auto) 1fr;
+    grid-template-rows: repeat(9, auto) 1fr;
     grid-template-areas:
+      'intro intro'
       'ctrl log'
+      'verdict log'
       'prov log'
       'kpi log'
       'chart log'
+      'map log'
       'notes log'
       'table log'
       'rest log';
@@ -237,3 +244,76 @@
 .fc-table td { white-space: nowrap; }
 .fc-table .fc-col-active { color: var(--primary); font-weight: 600; }
 .fc-table .fc-row-d2 td { background: var(--surface-2); }
+
+/* ---------- карта станции (StationMap) ---------- */
+.fc-map { height: 320px; border-radius: var(--radius-sm); overflow: hidden; border: 1px solid var(--border); background: var(--surface-2); }
+@media (max-width: 767px) { .fc-map { height: 260px; } }
+.fc-map .leaflet-container { font-family: var(--font); background: var(--surface-2); }
+:root:not([data-theme='light']) .fc-map .leaflet-tile-pane {
+  filter: invert(1) hue-rotate(180deg) brightness(0.85) contrast(0.9) saturate(0.5);
+}
+.fc-map .leaflet-control-attribution { background: var(--surface-solid); color: var(--text-3); font-size: 10px; }
+.fc-map .leaflet-control-attribution a { color: var(--text-2); }
+.fc-map .leaflet-bar a { background: var(--surface-solid); color: var(--text); border-color: var(--border); }
+.fc-map .leaflet-tooltip, .fc-map .leaflet-popup-content-wrapper, .fc-map .leaflet-popup-tip {
+  background: var(--surface-solid); color: var(--text); border: 1px solid var(--border-strong); box-shadow: var(--shadow);
+}
+.fc-map .leaflet-tooltip::before { display: none; }
+.fc-map .fc-map-label { font-family: var(--mono); font-weight: 600; font-size: 11px; padding: 1px 6px; }
+.fc-map-legend { display: flex; flex-wrap: wrap; gap: 6px 16px; margin-top: 10px; }
+.fc-map-legend span { display: inline-flex; align-items: center; gap: 6px; }
+.fc-map-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; }
+.fc-map-dot-ring { border: 2px solid var(--wind); background: transparent; }
+.fc-map-card .notice { margin-top: 10px; }
+.fc-map-card .card-head { flex-wrap: wrap; }
+.fc-map-wrap { position: relative; }
+.fc-map-hint {
+  position: absolute; left: 10px; bottom: 8px; z-index: 500; pointer-events: none;
+  font-size: 11px; color: var(--text-2); background: var(--surface-solid); border: 1px solid var(--border);
+  border-radius: 6px; padding: 2px 8px; max-width: calc(100% - 140px);
+}
+.fc-map-text { margin-top: 12px; font-size: 13px; color: var(--text-2); }
+.fc-map-text p { margin: 0 0 10px; }
+.fc-map-on { color: var(--ok); }
+.fc-map-off { color: var(--warn); }
+
+/* ---------- «Как это работает» ---------- */
+.fc-how {
+  position: relative; display: grid; grid-template-columns: minmax(200px, 1fr) 3fr; gap: 16px; align-items: start;
+  padding: 14px 44px 14px 16px; border-radius: var(--radius); border: 1px solid var(--border-strong);
+  background: linear-gradient(90deg, var(--primary-band), transparent 70%), var(--surface);
+}
+.fc-how-intro p { margin: 4px 0 0; font-weight: 600; }
+.fc-how-steps { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin: 0; padding: 0; list-style: none; }
+.fc-how-steps li { display: flex; gap: 10px; align-items: flex-start; }
+.fc-how-steps p { margin: 2px 0 0; font-size: 12px; color: var(--text-2); }
+.fc-how-n {
+  flex: none; display: grid; place-items: center; width: 24px; height: 24px; border-radius: 50%;
+  background: var(--primary); color: var(--primary-ink); font-size: 12px; font-weight: 600;
+}
+.fc-how-close { position: absolute; top: 8px; right: 8px; }
+@media (max-width: 1023px) {
+  .fc-how { grid-template-columns: 1fr; }
+  .fc-how-steps { grid-template-columns: 1fr; }
+}
+
+/* ---------- главный вывод ---------- */
+.fc-verdict {
+  display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 20px;
+  border-color: var(--border-strong);
+}
+@media (max-width: 1023px) { .fc-verdict { grid-template-columns: 1fr; } }
+.fc-verdict-text { margin: 6px 0 6px; font-size: 20px; line-height: 1.35; font-weight: 500; }
+.fc-verdict-text b { font-weight: 700; }
+.fc-verdict-num { color: var(--primary); font-family: var(--mono); }
+.fc-verdict-sub { margin: 0 0 10px; color: var(--text-2); }
+@media (max-width: 767px) { .fc-verdict-text { font-size: 17px; } }
+.fc-verdict-todo { border-left: 1px solid var(--border); padding-left: 20px; }
+@media (max-width: 1023px) { .fc-verdict-todo { border-left: 0; padding-left: 0; border-top: 1px solid var(--border); padding-top: 14px; } }
+.fc-todo { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 10px; }
+.fc-todo li { padding: 10px 12px; border-radius: var(--radius-sm); background: var(--warn-bg); }
+.fc-todo-head { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 10px; }
+.fc-todo-when { font-size: 12px; color: var(--text-2); }
+.fc-todo-text { font-size: 13px; color: var(--text-2); margin-top: 2px; }
+.fc-todo-action { font-size: 13px; font-weight: 600; color: var(--warn); margin-top: 4px; }
+.fc-todo-none { display: flex; align-items: center; gap: 8px; color: var(--ok); margin: 8px 0 0; }

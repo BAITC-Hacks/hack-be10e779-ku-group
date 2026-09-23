@@ -63,6 +63,17 @@ export type UpdateInfo = {
   significant: boolean
 }
 
+/** Карточка внимания диспетчера (бэкенд: passport.cards). */
+export type Card = {
+  kind: string // revision | wide_interval | input
+  title: string
+  hours: string[] // [первый час, последний час]
+  value: number
+  text: string
+  rule: string
+  action: string
+}
+
 export type Forecast = {
   issue_date: string // "2026-02-09" — прогноз сделан в конце этого дня
   issued_at: string // "2026-02-09T23:59"
@@ -82,6 +93,8 @@ export type Forecast = {
   fallback?: boolean
   steps: AgentStep[]
   computed_at?: string
+  cards?: Card[]
+  passport?: Record<string, unknown> | null
 }
 
 export type Meta = {

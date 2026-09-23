@@ -18,6 +18,9 @@ import { KpiRow } from './KpiRow'
 import { Provenance } from './Provenance'
 import { useElapsed, useMediaQuery } from './hooks'
 import { ddmm, objectLabel, targetDays, type ObjectId } from './model'
+import { StationMap } from './StationMap'
+import { HowItWorks } from './HowItWorks'
+import { Verdict } from './Verdict'
 import './forecast.css'
 
 const REVEAL_STEP_MS = 120
@@ -109,6 +112,10 @@ export default function ForecastTab(props: ForecastTabProps) {
 
   return (
     <div className="fc-layout">
+      <div className="fc-area-intro">
+        <HowItWorks />
+      </div>
+
       <div className="fc-area-ctrl">
         <ControlPanel
           issueDate={issueDate}
@@ -127,6 +134,12 @@ export default function ForecastTab(props: ForecastTabProps) {
       </div>
 
       {shown && (
+        <div className="fc-area-verdict">
+          <Verdict f={shown} object={object} issueDate={issueDate} />
+        </div>
+      )}
+
+      {shown && (
         <div className="fc-area-prov">
           <Provenance f={shown} />
         </div>
@@ -139,9 +152,9 @@ export default function ForecastTab(props: ForecastTabProps) {
       <section className="card fc-area-chart fc-chart-card" aria-label="График прогноза">
         <div className="fc-chart-head">
           <div>
-            <div className="eyebrow">Почасовой прогноз · 48 ч · время UTC+5</div>
+            <div className="eyebrow">По часам · 48 ч · местное время UTC+5</div>
             <h2 className="card-title">
-              Мощность, % номинала · {objectLabel(object)}
+              Мощность, % от максимальной · {objectLabel(object)}
               <span className="muted fc-chart-days">
                 {' '}
                 · {ddmm(d1)} и {ddmm(d2)}
@@ -150,7 +163,7 @@ export default function ForecastTab(props: ForecastTabProps) {
           </div>
           {shown && (
             <div className="fc-chart-meta">
-              {object !== 'station' && <span className="fc-chart-hint">интервал рассчитан только для станции</span>}
+              {object !== 'station' && <span className="fc-chart-hint">вероятный диапазон считается только для станции</span>}
               {requestMs[issueDate] != null ? (
                 <Badge tone="ok">Прогноз готов · {ms(requestMs[issueDate])}</Badge>
               ) : shown.computed_at ? (
@@ -202,6 +215,10 @@ export default function ForecastTab(props: ForecastTabProps) {
           </Empty>
         ) : null}
       </section>
+
+      <div className="fc-area-map">
+        <StationMap meta={meta} f={shown} object={object} onObjectChange={setObject} theme={theme} />
+      </div>
 
       <div className="fc-area-log">
         <AgentLog

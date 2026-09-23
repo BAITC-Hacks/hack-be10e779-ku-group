@@ -39,7 +39,7 @@ export function ControlPanel(props: {
       <div className="fc-ctrl-row">
         <div className="fc-ctrl-group">
           <label className="eyebrow" htmlFor="fc-issue-date">
-            Момент прогноза
+            Дата прогноза
           </label>
           <div className="fc-date">
             <button
@@ -84,7 +84,7 @@ export function ControlPanel(props: {
             className="segmented"
             role="group"
             aria-labelledby="fc-object-label"
-            title="Станция = среднее двух турбин, доля от номинала"
+            title="Станция = среднее двух турбин, в % от максимальной мощности"
           >
             {OBJECTS.map((o) => (
               <button
@@ -118,9 +118,9 @@ export function ControlPanel(props: {
 
       <div className="fc-ctrl-foot">
         <div className="fc-ctrl-caption">
-          Выпуск <span className="mono">{dateRu(issueDate)}, 23:59</span> → прогноз на{' '}
+          Прогноз делается вечером <span className="mono">{dateRu(issueDate)}, 23:59</span> на{' '}
           <span className="mono">{ddmm(d1)}</span> и <span className="mono">{ddmm(d2)}</span>
-          <span className="muted"> · UTC+5 · используется только погода, выпущенная до этого момента</span>
+          <span className="muted"> — как будто будущее ещё неизвестно: берётся только погода, опубликованная до этого момента</span>
         </div>
         {hint && <div className="fc-ctrl-hint">{hint}</div>}
       </div>

@@ -45,14 +45,14 @@ export function readChartColors(_theme: string): ChartColors {
 }
 
 export const SERIES = {
-  band: 'Интервал p10–p90',
-  curve: 'Кривая мощности',
+  band: 'Вероятный диапазон (80 %)',
+  curve: 'Простой расчёт по ветру',
   wind: 'Ветер 100 м (прогноз)',
   actual: 'Факт',
 }
 
 export function mainSeriesName(obj: ObjectId): string {
-  return obj === 'station' ? 'Прогноз станции (p50)' : `${objectLabel(obj)} (прогноз)`
+  return obj === 'station' ? 'Прогноз станции' : `${objectLabel(obj)} (прогноз)`
 }
 
 type AxisParam = { dataIndex: number }
@@ -123,11 +123,11 @@ export function buildChartOption(f: Forecast, obj: ObjectId, c: ChartColors, nar
       label: { color: c.text3, fontSize: 11, position: 'insideTop', distance: 6 },
       data: [
         [
-          { name: `Сутки 1 · ${dayLabel(d1)}`, xAxis: 0, itemStyle: { color: 'transparent' } },
+          { name: `Завтра · ${dayLabel(d1)}`, xAxis: 0, itemStyle: { color: 'transparent' } },
           { xAxis: split },
         ],
         [
-          { name: `Сутки 2 · ${dayLabel(d2)}`, xAxis: split, itemStyle: { color: c.surface2, opacity: 0.85 } },
+          { name: `Послезавтра · ${dayLabel(d2)}`, xAxis: split, itemStyle: { color: c.surface2, opacity: 0.85 } },
           { xAxis: last },
         ],
       ],
@@ -137,7 +137,7 @@ export function buildChartOption(f: Forecast, obj: ObjectId, c: ChartColors, nar
       symbol: ['none', 'none'],
       lineStyle: { color: c.text, width: 1, type: 'solid' },
       label: {
-        formatter: `Выпуск ${ddmm(f.issue_date)} 23:59`,
+        formatter: `Прогноз сделан ${ddmm(f.issue_date)} 23:59`,
         position: 'end',
         align: 'left',
         color: c.text2,
@@ -193,8 +193,8 @@ export function buildChartOption(f: Forecast, obj: ObjectId, c: ChartColors, nar
     const row = (label: string, value: string, color?: string) =>
       `<div class="fc-tt-row">${color ? `<i style="background:${color}"></i>` : '<i></i>'}<span>${label}</span><b>${value}</b></div>`
     const rows = [
-      row(station ? 'Прогноз (p50)' : objectLabel(obj), pct(valueOf(h, obj)), mainColor),
-      station ? row('Интервал p10–p90', `${pct(h.p10)} – ${pct(h.p90)}`, c.band) : '',
+      row(station ? 'Прогноз' : objectLabel(obj), pct(valueOf(h, obj)), mainColor),
+      station ? row('Вероятно от–до', `${pct(h.p10)} – ${pct(h.p90)}`, c.band) : '',
       row(curveName, pct(h.curve), c.curve),
       row('Ветер 100 м', h.wind_100m == null ? '—' : `${num(h.wind_100m)} м/с`, c.wind),
       row('Т1 · Т2', `${pct(h.t1)} · ${pct(h.t2)}`),
@@ -202,7 +202,7 @@ export function buildChartOption(f: Forecast, obj: ObjectId, c: ChartColors, nar
     ]
     return (
       `<div class="fc-tt"><div class="fc-tt-head">${esc(dayLabel(h.time))} · ${esc(hourOf(h.time))}` +
-      `<span>Сутки ${h.lead_day}</span></div>${rows.join('')}</div>`
+      `<span>${h.lead_day === 1 ? 'завтра' : 'послезавтра'}</span></div>${rows.join('')}</div>`
     )
   }
 

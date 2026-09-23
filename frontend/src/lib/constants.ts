@@ -2,7 +2,7 @@ import type { Meta } from '../api/types'
 
 // Значения из CASE.md — используются, пока бэкенд не отдаёт /api/meta.
 export const DEFAULT_META: Meta = {
-  station: { name: 'ВЭС, Алматинская обл.', tz: 'Asia/Almaty', utc_offset: '+05:00' },
+  station: { name: 'ВЭС, 2 турбины (Алматинская обл.)', tz: 'Asia/Almaty', utc_offset: '+05:00' },
   turbines: [
     { id: 't1', lat: 43.64515, lon: 78.535604 },
     { id: 't2', lat: 43.643198, lon: 78.538828 },

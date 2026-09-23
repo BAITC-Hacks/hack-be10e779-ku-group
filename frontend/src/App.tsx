@@ -103,7 +103,7 @@ export default function App() {
           <div>
             <div className="brand-name">Ветер·Прогноз</div>
             <div className="brand-sub">
-              {meta.station.name} · 2 турбины · время станции UTC+5
+              {meta.station.name} · время станции UTC+5
             </div>
           </div>
         </div>
@@ -119,9 +119,9 @@ export default function App() {
         <div className="topbar-right">
           {headline && (
             <button className="headline" onClick={() => setTab('quality')} title={`MAE прогноза на сутки вперёд, % номинала · ${metrics?.holdout ?? ''} · подробнее — вкладка «Качество модели»`}>
-              <span className="eyebrow">MAE D+1 · история</span>
+              <span className="eyebrow">Ошибка прогноза на завтра</span>
               <span className="mono">
-                {num(headline.model * 100)} % <span className="muted">vs {num(headline.curve * 100)} % у кривой мощности</span>
+                {num(headline.model * 100)} % <span className="muted">vs {num(headline.curve * 100)} % у простого расчёта</span>
               </span>
             </button>
           )}

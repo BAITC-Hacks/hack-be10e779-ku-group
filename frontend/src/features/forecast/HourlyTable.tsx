@@ -20,9 +20,9 @@ export function HourlyTable(props: { f: Forecast; object: ObjectId }) {
           <thead>
             <tr>
               <th>Время</th>
-              <th>Сутки</th>
+              <th>День</th>
               <th className={hl('station')}>Прогноз</th>
-              <th className="r">p10–p90</th>
+              <th className="r">Вероятно от–до</th>
               <th className="r">Кривая</th>
               <th className={hl('t1')}>Т1</th>
               <th className={hl('t2')}>Т2</th>

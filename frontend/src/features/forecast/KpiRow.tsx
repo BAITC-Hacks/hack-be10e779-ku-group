@@ -15,34 +15,34 @@ export function KpiRow(props: { f: Forecast | null; object: ObjectId; issueDate:
   let items: Item[]
   if (!f) {
     items = [
-      { label: 'Выработка D+1', value: '—', share: null, caption: `${dayLabel(d1)} · нет прогноза` },
-      { label: 'Выработка D+2', value: '—', share: null, caption: `${dayLabel(d2)} · нет прогноза` },
-      { label: 'Пик', value: '—', share: null, caption: 'нет прогноза' },
-      { label: 'Часы штиля', value: '—', share: null, caption: 'мощность < 5 % · нет прогноза' },
+      { label: `Завтра, ${dayLabel(d1)}`, value: '—', share: null, caption: 'нет прогноза' },
+      { label: `Послезавтра, ${dayLabel(d2)}`, value: '—', share: null, caption: 'нет прогноза' },
+      { label: 'Пик мощности', value: '—', share: null, caption: 'нет прогноза' },
+      { label: 'Почти без ветра', value: '—', share: null, caption: 'нет прогноза' },
     ]
   } else {
     const k = kpiFor(f, object)
-    const energy = (v: number | null, day: string, label: string): Item => ({
+    const energy = (v: number | null, label: string): Item => ({
       label,
-      value: hoursFull(v),
-      unit: v == null ? undefined : 'на номинале',
+      value: pct(v == null ? null : v / 24),
+      unit: v == null ? undefined : 'от макс.',
       share: v == null ? null : v / 24,
-      caption: `${dayLabel(day)} · ср. загрузка ${pct(v == null ? null : v / 24)}`,
+      caption: `как ${hoursFull(v)} работы на полную мощность`,
     })
     items = [
-      energy(k.energyD1, d1, 'Выработка D+1'),
-      energy(k.energyD2, d2, 'Выработка D+2'),
+      energy(k.energyD1, `Завтра, ${dayLabel(d1)}`),
+      energy(k.energyD2, `Послезавтра, ${dayLabel(d2)}`),
       {
-        label: 'Пик',
+        label: 'Пик мощности',
         value: pct(k.peakValue),
         share: k.peakValue,
-        caption: k.peakTime ? `${dayLabel(k.peakTime)}, ${hourOf(k.peakTime)} · p50` : '—',
+        caption: k.peakTime ? `${dayLabel(k.peakTime)}, ${hourOf(k.peakTime)}` : '—',
       },
       {
-        label: 'Часы штиля',
+        label: 'Почти без ветра',
         value: k.lowHours == null ? '—' : `${k.lowHours} ч`,
         share: k.lowHours == null || k.hoursTotal === 0 ? null : k.lowHours / k.hoursTotal,
-        caption: `из ${k.hoursTotal} · мощность < 5 %`,
+        caption: `из ${k.hoursTotal} · мощность ниже 5 %`,
       },
     ]
   }

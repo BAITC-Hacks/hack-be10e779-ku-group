@@ -5,6 +5,7 @@ import type { Forecast } from '../../api/types'
 import { Card, Notice } from '../../components/ui'
 import { dateRu, num, pct } from '../../lib/format'
 import { dayLabel, prettyDates } from './model'
+import { plainFlag } from './plain'
 
 const SIGNIFICANT = 0.05 // как в контракте: mean_abs_change > 0.05 → «прогноз заметно изменился»
 
@@ -48,19 +49,19 @@ export function Analysis(props: { f: Forecast }) {
     const digits = num(upd.energy_old) === num(upd.energy_new) ? 2 : 1
     update = (
       <Notice tone={upd.significant ? 'warn' : 'info'}>
-        Прогноз на {dayLabel(upd.day)} обновлён по свежей погоде: <span className="mono">{num(upd.energy_old, digits)}</span> →{' '}
-        <span className="mono">{num(upd.energy_new, digits)}</span> ч на номинале, среднее изменение{' '}
+        Вчерашний прогноз на {dayLabel(upd.day)} пересчитан по свежей погоде:{' '}
+        <span className="mono">{num(upd.energy_old, digits)}</span> → <span className="mono">{num(upd.energy_new, digits)}</span> ч
+        работы на полную мощность ({upd.energy_new >= upd.energy_old ? 'больше' : 'меньше'}), по часам в среднем на{' '}
         <span className="mono">{pct(upd.mean_abs_change, 1)}</span>
         <span className="fc-notice-sub">
-          Сравнение с выпуском {dateRu(upd.previous_issue)} · максимум за час {pct(upd.max_abs_change, 1)}
+          Сравнение с прогнозом от {dateRu(upd.previous_issue)} · самое большое изменение за час — {pct(upd.max_abs_change, 1)}
         </span>
       </Notice>
     )
   } else if (changed != null) {
     update = (
       <Notice tone={changed > SIGNIFICANT ? 'warn' : 'info'}>
-        Относительно прошлого выпуска прогноз на D+1 изменился в среднем на <span className="mono">{pct(changed, 1)}</span>{' '}
-        номинала
+        По сравнению со вчерашним прогнозом завтрашние часы изменились в среднем на <span className="mono">{pct(changed, 1)}</span>
       </Notice>
     )
   }
@@ -71,7 +72,7 @@ export function Analysis(props: { f: Forecast }) {
       eyebrow="Анализ результата"
       title={
         <span className="fc-title-icon">
-          <ScanSearch size={16} aria-hidden /> Предупреждения и пересчёт
+          <ScanSearch size={16} aria-hidden /> Проверки агента и пересчёт
         </span>
       }
     >
@@ -80,12 +81,12 @@ export function Analysis(props: { f: Forecast }) {
           <Notice tone="ok">Замечаний нет</Notice>
         ) : (
           flags.map((fl, i) => (
-            <Notice key={i} tone="warn">
-              {prettyDates(fl)}
-            </Notice>
+            <div key={i} title={fl}>
+              <Notice tone="warn">{plainFlag(fl)}</Notice>
+            </div>
           ))
         )}
-        {update && <div className="eyebrow fc-notices-sep">Пересчёт при обновлении погоды</div>}
+        {update && <div className="eyebrow fc-notices-sep">Пересчёт при свежей погоде</div>}
         {update}
       </div>
     </Card>

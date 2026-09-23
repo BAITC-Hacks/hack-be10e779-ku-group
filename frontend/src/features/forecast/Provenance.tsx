@@ -7,6 +7,13 @@ import type { Forecast } from '../../api/types'
 import { Badge } from '../../components/ui'
 import { dateTime } from '../../lib/format'
 
+/** "gfs_ws100" → «GFS (ветер 100 м)». */
+function prettySource(s: string): string {
+  const [id, h] = s.split('_ws')
+  const name = id === 'best_match' ? 'Open-Meteo' : id.toUpperCase()
+  return h ? `${name} (ветер ${h} м)` : name
+}
+
 const BY_DEFINITION = 'по правилу архива Open-Meteo и задержке публикации'
 
 export function Provenance(props: { f: Forecast }) {
@@ -64,13 +71,13 @@ export function Provenance(props: { f: Forecast }) {
         {integrity}
         <span className="fc-prov-note">{BY_DEFINITION}</span>
       </div>
-      <Badge tone="neutral" icon={<CloudSun size={14} />} title={f.weather_runs}>
-        <span className="fc-wrap">Погода: {f.weather_source}</span>
+      <Badge tone="neutral" icon={<CloudSun size={14} />} title={`${f.weather_source}\n${f.weather_runs}`}>
+        <span className="fc-wrap">Погода: архив прогнозов Open-Meteo, 7 мировых моделей</span>
       </Badge>
       {excluded.length > 0 && (
         <Badge tone="info" icon={<Filter size={14} />} title="Источники погоды, которые агент исключил (причина — в шаге «Оценка источников погоды»)">
           <span className="fc-wrap">
-            Исключены: <span className="mono">{excluded.join(', ')}</span>
+            Агент отбросил ненадёжное: {excluded.map(prettySource).join(', ')}
           </span>
         </Badge>
       )}
