@@ -1,4 +1,4 @@
-# ВетроПрогноз — агентный прогноз выработки ВЭС на 24–48 часов
+# Анемо (ВетроПрогноз) — агентный прогноз выработки ВЭС на 24–48 часов
 
 ВетроПрогноз помогает диспетчеру или аналитику ВЭС оценить почасовую нормированную выработку станции на следующие двое суток. Для каждого часа система возвращает медианный прогноз `p50`, интервал неопределённости `p10–p90`, прогнозы двух турбин, пояснение агента и карточки внимания. Основной сценарий работает без личного аккаунта, API-ключа и доступа к интернету: архивные выпуски погоды сохранены в `data/weather/`, а режим DEMO выполняет тот же цикл детерминированным планировщиком (`backend/app/forecast/agent.py`, `backend/app/forecast/weather.py`).
 
@@ -12,14 +12,14 @@
 | Только доступные на момент решения архивные выпуски погоды | `backend/app/forecast/weather.py`, `backend/app/forecast/model.py` | `cd backend && pytest -q tests/test_forecast_core.py` |
 | 48 почасовых значений `p10`, `p50`, `p90`, T1 и T2 | `backend/app/forecast/pipeline.py` | `POST /api/forecast` |
 | Агентный цикл из семи инструментов | `backend/app/forecast/agent.py` | журнал `steps` в ответе API и на вкладке «Прогноз» |
-| Калибровка интервала неопределённости | `backend/app/forecast/calibrate.py`, `outputs/calibration.json` | `GET /api/metrics` |
+| Калибровка интервала неопределённости | `backend/app/forecast/calibrate.py`, `outputs/calibration.json` | `outputs/calibration.json` (покрытие до калибровки — в `GET /api/metrics`) |
 | Неизменяемый паспорт выпуска и сравнение версий | `backend/app/forecast/passport.py`, `outputs/forecasts/` | `GET /api/forecast/{issue_date}` |
 | HTTP API и интерфейс диспетчера | `backend/app/api/forecast.py`, `frontend/src/features/` | открыть <http://localhost:8000> |
 | Полный февральский бэктест и CSV | `backend/app/forecast/cli.py` | `cd backend && python -m app.forecast.cli backtest` |
 
 ## Ценность для Казахстана
 
-- Производитель ВИЭ подаёт заявку с почасовыми объёмами поставки до 08:00 по времени Астаны в сутки, предшествующие операционным суткам: пункт 9 правил, утверждённых [приказом Министра энергетики РК от 2 марта 2015 года № 164](https://adilet.zan.kz/rus/docs/V1500010662). Прогноз D+1 даёт основу для такой заявки, а D+2 — раннее предупреждение (`backend/app/forecast/pipeline.py`).
+- Производитель ВИЭ подаёт заявку с почасовыми объёмами поставки до 08:00 по времени Астаны в сутки, предшествующие операционным суткам: пункт 9 правил, утверждённых [приказом Министра энергетики РК от 2 марта 2015 года № 164](https://adilet.zan.kz/rus/docs/V1500010662). Выпуск делается в конце дня D, поэтому заявку на операционные сутки D+2 (срок — 08:00 дня D+1) можно подать уже по нему, а D+1 — самый свежий прогноз на ближайшие сутки для внутрисуточного планирования и оценки дисбаланса (`backend/app/forecast/pipeline.py`).
 - Дисбаланс определяется как разница планового и фактического сальдо за каждый час операционных суток: пункт 78 [Правил функционирования балансирующего рынка электрической энергии](https://zakon.uchet.kz/rus/docs/V1500010532). Поэтому продукт показывает именно почасовой прогноз и выделяет часы существенного пересмотра (`backend/app/forecast/passport.py`, `frontend/src/features/forecast/`).
 - По данным [годового отчёта KEGOC за 2024 год](https://ar2024.kegoc.kz/ru/electricity-balance.html), в Казахстане действовали 57 ВЭС суммарной мощностью 1 525,7 МВт. Задача точного планирования относится уже к значимому для энергосистемы классу генерации.
 
@@ -90,7 +90,7 @@ h − N суток + 7 часов ≤ дата выпуска D, 23:59
 
 Каждый завершённый выпуск сохраняется как `outputs/forecasts/<forecast_id>.json`. Паспорт содержит момент решения и целевой интервал в UTC+5, погодный профиль и использованные выпуски, эффективные и исключённые источники, границы обучающих данных, версии модели и калибровки, `input_hash`, `result_hash`, режим исполнения и статус проверки доступности входов (`backend/app/forecast/passport.py`).
 
-`forecast_id` составлен из даты и хеша входов. Повтор с теми же входами даёт тот же `forecast_id`; существующая версия не перезаписывается (`backend/app/forecast/passport.py::save`). Ссылка `parent_id` связывает выпуск с предыдущим сохранённым выпуском.
+`forecast_id` составлен из даты и хеша входов, в который входит и режим исполнения: LIVE-выпуск хранится отдельной версией от прогона планировщика. Повтор с теми же входами в том же режиме даёт тот же `forecast_id`; существующая версия не перезаписывается (`backend/app/forecast/passport.py::save`). Ссылка `parent_id` связывает выпуск с предыдущим сохранённым выпуском.
 
 При сравнении берутся общие 24 часа: вчерашний сохранённый D+2 и сегодняшний D+1. Прошлый прогноз не пересчитывается новой моделью; реконструкция применяется только тогда, когда сохранённой предыдущей версии нет, например для первого выпуска 31.01 (`backend/app/forecast/agent.py::compare_with_previous`, `backend/app/forecast/passport.py::compare`).
 
@@ -100,7 +100,7 @@ h − N суток + 7 часов ≤ дата выпуска D, 23:59
 - «Широкий диапазон» — часы, где `p90 − p10 ≥ 0,30`;
 - «Ненадёжный вход» — нарушение временной проверки или пропуски погоды.
 
-Карточки, паспорт, график, почасовая таблица и журнал инструментов показаны на вкладке прогноза (`frontend/src/features/forecast/`).
+Карточки внимания, график, почасовая таблица, бейдж проверки времени с исключёнными источниками и журнал инструментов показаны на вкладке прогноза (`frontend/src/features/forecast/`). Паспорт выпуска целиком доступен в ответе API (поле `passport` в `POST /api/forecast` и `GET /api/forecast/{issue_date}`) и в файле `outputs/forecasts/<forecast_id>.json`.
 
 ## Данные и модель
 
@@ -129,7 +129,7 @@ h − N суток + 7 часов ≤ дата выпуска D, 23:59
 то, что выполняет агент. Граница обучения каждого месяца проверки — S − 1 сут − 1 ч, чтобы и прогноз на D+2 для первого числа
 не видел «будущий» факт.
 
-Для контекста, обзор Giebel et al. приводит для day-ahead прогноза отдельной ВЭС отраслевой диапазон **10–20% nRMSE от номинальной мощности** ([стр. 59 отчёта](https://backend.orbit.dtu.dk/ws/files/128933990/GGiebelEtAl_StateOfTheArtInShortTermPrediction_ANEMOSplus_2011.pdf)). Наши 22,25% для D+1 и 23,75% для D+2 находятся выше этого ориентира; сравнение ориентировочное, поскольку площадки, периоды и доступные входы различаются.
+Для контекста, обзор Giebel et al. со ссылкой на опыт Германии (Rohrig) приводит для day-ahead прогноза отдельной ВЭС диапазон **10–20% RMSE от номинальной мощности** ([стр. 59 отчёта](https://backend.orbit.dtu.dk/ws/files/128933990/GGiebelEtAl_StateOfTheArtInShortTermPrediction_ANEMOSplus_2011.pdf)). Наши 22,25% для D+1 и 23,75% для D+2 находятся выше этого ориентира; сравнение ориентировочное, поскольку площадки, периоды и доступные входы различаются.
 
 Некалиброванный интервал `p10–p90` в том же скользящем holdout покрывает 69,2% факта для D+1 и 67,9% для D+2 при цели 80% (`outputs/metrics.json`). Отдельная калибровка обучена на октябре–декабре и проверена на январе.
 
@@ -144,7 +144,7 @@ h − N суток + 7 часов ≤ дата выпуска D, 23:59
 
 ### Что проверили и не взяли
 
-Эксперимент воспроизводится кодом `backend/experiments/features_exp.py`, выводы зафиксированы в разделе «Эксперимент признаков» файла `docs/memory/backend.md`. Критерий принятия: снижение MAE `p50` минимум на 0,002 в каждом или как минимум в трёх из четырёх месяцев holdout.
+Эксперимент воспроизводится кодом `backend/experiments/features_exp.py`, выводы зафиксированы в разделе «Эксперимент признаков» файла `docs/memory/backend.md`. Критерий принятия: среднее по D+1 и D+2 снижение MAE `p50` минимум на 0,002 как минимум в трёх из четырёх месяцев holdout.
 
 | Кандидат | Результат | Решение |
 | --- | --- | --- |
@@ -261,7 +261,7 @@ python -m app.forecast.cli weather
 | `GET /api/backtest` | получить готовый февральский бэктест |
 | `POST /api/backtest` | запустить полный бэктест 31.01–27.02 |
 | `GET /api/backtest/csv?kind=all\|final` | скачать полный или финальный CSV |
-| `GET /api/metrics` | метрики holdout, покрытие и калибровка |
+| `GET /api/metrics` | метрики holdout и покрытие некалиброванного интервала; результаты калибровки — в `outputs/calibration.json` |
 | `GET /api/history?start=…&end=…` | получить исторический факт, не более 62 дней |
 | `GET /api/holdout?issue_date=…` | прогноз против факта для январского выпуска |
 
@@ -274,6 +274,8 @@ cd backend
 .venv/bin/pytest -q
 .venv/bin/ruff check .
 ```
+
+Полный набор занимает около 4 минут: интеграционный тест агента обучает модель. Быстрая проверка без него — `.venv/bin/pytest -q -k 'not real_agent'`.
 
 Тесты ядра проверяют допустимый период выпуска, 48 часов, границы 0–1, порядок `p10 ≤ p50 ≤ p90` и отсутствие погодной утечки (`backend/tests/test_forecast_core.py`). API и паспорт проверяются в `backend/tests/test_api_forecast.py`. Модели используют `random_state=0`, а сохранение по хешу не перезаписывает существующую версию (`backend/app/forecast/model.py`, `backend/app/forecast/passport.py`).
 
@@ -311,7 +313,10 @@ cd backend
 | --- | --- | --- | --- |
 | Данные двух турбин от организатора | обучение и проверка модели | предоставлены для кейса | `data/raw/`, `CASE.md` |
 | Open-Meteo Previous Runs и семь NWP-источников | архивные прогнозы погоды | CC BY 4.0 | [Open-Meteo](https://open-meteo.com/en/docs/previous-runs-api) |
-| FastAPI, Starlette, Pydantic | backend и валидация | MIT | [FastAPI](https://github.com/fastapi/fastapi) |
+| FastAPI, Pydantic, pydantic-settings | backend, валидация, конфигурация | MIT | [FastAPI](https://github.com/fastapi/fastapi) |
+| Starlette | ASGI-основа FastAPI | BSD-3-Clause | [Starlette](https://github.com/encode/starlette) |
+| SQLAlchemy | подключение SQLite из каркаса | MIT | [SQLAlchemy](https://github.com/sqlalchemy/sqlalchemy) |
+| python-multipart | разбор форм и загрузок в FastAPI | Apache-2.0 | [python-multipart](https://github.com/Kludex/python-multipart) |
 | Uvicorn | ASGI-сервер | BSD-3-Clause | [Uvicorn](https://github.com/encode/uvicorn) |
 | pandas | временные ряды | BSD-3-Clause | [pandas](https://github.com/pandas-dev/pandas) |
 | NumPy | численные преобразования | BSD-3-Clause | [NumPy](https://github.com/numpy/numpy) |
@@ -324,3 +329,6 @@ cd backend
 | OpenStreetMap | подложка карты (загружается из сети; без интернета карта пустая, остальной интерфейс работает) | ODbL | [OpenStreetMap](https://www.openstreetmap.org/copyright) |
 | Vite и шаблон create-vite | сборка и frontend-каркас | MIT | [Vite](https://github.com/vitejs/vite) |
 | TypeScript | типизация frontend | Apache-2.0 | [TypeScript](https://github.com/microsoft/TypeScript) |
+| lucide-react | иконки интерфейса | ISC | [Lucide](https://github.com/lucide-icons/lucide) |
+| Шрифты Manrope и JetBrains Mono (@fontsource) | шрифты интерфейса | OFL-1.1 | [Fontsource](https://github.com/fontsource/font-files) |
+| pytest, Ruff, oxlint | тесты и статические проверки | MIT | [pytest](https://github.com/pytest-dev/pytest), [Ruff](https://github.com/astral-sh/ruff), [oxlint](https://github.com/oxc-project/oxc) |
