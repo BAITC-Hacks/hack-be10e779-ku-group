@@ -151,7 +151,9 @@ def power_curve(end: pd.Timestamp) -> pd.Series:
 
 
 def apply_curve(curve: pd.Series, ws: pd.Series) -> np.ndarray:
-    return np.interp(ws.fillna(0).to_numpy(), curve.index.to_numpy(), curve.to_numpy())
+    # пропуск ветра не превращаем в ноль мощности — оставляем пропуск
+    out = np.interp(ws.fillna(0).to_numpy(), curve.index.to_numpy(), curve.to_numpy())
+    return np.where(ws.isna().to_numpy(), np.nan, out)
 
 
 @lru_cache(maxsize=8)

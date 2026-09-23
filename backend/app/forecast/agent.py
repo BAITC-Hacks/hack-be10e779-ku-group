@@ -17,7 +17,7 @@ from pydantic import BaseModel, Field
 
 from app.ai.agent import run_agent, tool
 from app.ai.llm import LLMClient, LLMUnavailable
-from app.forecast import calibrate, data, model, pipeline, weather
+from app.forecast import calibrate, data, model, passport, pipeline, weather
 
 LAST_KNOWN = pd.Timestamp("2026-01-31 23:00")  # позже этого факта нет вообще
 BAD_SOURCE_MISSING = 0.2
@@ -129,12 +129,19 @@ def analyze_forecast(a: IssueArgs) -> dict:
     return st["analysis"]
 
 
-@tool("Пересчитать сутки D+1 и сравнить с прошлым выпуском (обновление входных данных погоды)", IssueArgs)
+@tool("Сравнить новый прогноз с сохранённым прошлым выпуском (пересмотр после обновления погоды)", IssueArgs)
 def compare_with_previous(a: IssueArgs) -> dict:
     st = _st(a.issue_date)
     if "hours" not in st:
         return {"error": "Сначала run_forecast"}
-    st["update"] = pipeline.compare_with_previous(a.issue_date, st["hours"])
+    prev_issue = str((pd.Timestamp(a.issue_date) - pd.Timedelta(days=1)).date())
+    prev = passport.latest(prev_issue)
+    if prev:
+        st["update"] = passport.compare(prev, st["hours"])
+    else:  # прошлого выпуска нет в хранилище (например, первый выпуск 31.01) — реконструкция текущей моделью
+        st["update"] = {**pipeline.compare_with_previous(a.issue_date, st["hours"]),
+                        "method": "реконструкция (сохранённого прошлого выпуска нет)", "hours_changed_10pp": 0,
+                        "changed_hours": [], "common_hours": 24}
     return st["update"]
 
 
@@ -184,12 +191,13 @@ def _deterministic(issue_date: str) -> tuple[list[dict], str]:
     return steps, text
 
 
-def run(issue_date: str) -> dict:
-    """Один выпуск прогноза. Ответ — `Forecast` из docs/api-contract.md."""
+def run(issue_date: str, planner_only: bool = False) -> dict:
+    """Один выпуск прогноза. Ответ — `Forecast` из docs/api-contract.md + паспорт и карточки.
+    `planner_only` — без LLM (ретроспективный прогон февраля: 28 выпусков не тратят кредиты и воспроизводимы)."""
     pipeline.check_issue_date(issue_date)
     _state.pop(issue_date, None)
     llm = LLMClient()
-    mode = llm.mode
+    mode = "demo" if planner_only else llm.mode
     explanation, steps = "", []
     if mode == "live":
         try:
@@ -208,7 +216,7 @@ def run(issue_date: str) -> dict:
         if mode == "live":
             explanation = explanation or explanation2
     st = _state[issue_date]
-    return {
+    forecast = {
         "issue_date": issue_date,
         "issued_at": f"{issue_date}T23:59",
         "weather_source": weather.SOURCE + " + ансамбль ECMWF/ICON/GFS/JMA/CMA/GEM",
@@ -219,10 +227,14 @@ def run(issue_date: str) -> dict:
         "summary": st["analysis"]["summary"],
         "analysis": {"flags": st["analysis"]["flags"], "changed_vs_previous": st["update"]["mean_abs_change"],
                      "update": st["update"]},
+        "cards": passport.cards(st["hours"], st["update"], st["weather"], st["exclude"]),
         "explanation": explanation,
         "mode": mode,
         "steps": steps,
     }
+    pas = passport.build(issue_date, st["x"], st["hours"], st["weather"], st["exclude"], mode, steps)
+    forecast["passport"] = passport.save(pas, forecast)
+    return forecast
 
 
 def history(start: str, end: str) -> list[dict]:
