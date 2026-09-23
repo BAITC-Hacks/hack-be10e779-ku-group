@@ -19,7 +19,7 @@ import './App.css'
 type Tab = TabId
 const TABS: { id: Tab; label: string }[] = [
   { id: 'forecast', label: 'Прогноз' },
-  { id: 'february', label: 'Февраль 2026' },
+  { id: 'february', label: 'Прогноз на период' },
   { id: 'quality', label: 'Качество модели' },
   { id: 'project', label: 'О проекте' },
 ]
@@ -188,7 +188,7 @@ export default function App() {
           </ErrorBoundary>
         </div>
         <div hidden={tab !== 'february'}>
-          <ErrorBoundary name="Февраль 2026">
+          <ErrorBoundary name="Прогноз на период">
             <FebruaryTab meta={meta} theme={theme} onOpenDate={openForecast} />
           </ErrorBoundary>
         </div>

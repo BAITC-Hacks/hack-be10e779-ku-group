@@ -134,7 +134,7 @@ export default function ProjectTab(props: ProjectTabProps) {
               Открыть прогноз <ArrowRight size={16} />
             </button>
             <button type="button" className="btn" onClick={() => props.onOpenTab('february')}>
-              Весь февраль
+              Прогноз на период
             </button>
           </div>
         </div>
