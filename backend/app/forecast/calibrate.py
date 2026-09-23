@@ -27,7 +27,7 @@ def _month_predictions(mon: str) -> pd.DataFrame:
     """Прогноз на месяц моделью, обученной только до его начала, для обоих горизонтов."""
     start = pd.Timestamp(mon + "-01")
     end = start + pd.offsets.MonthEnd(0) + pd.Timedelta(hours=23)
-    f = model.get_forecaster(str(start - pd.Timedelta(hours=1)))
+    f = model.get_forecaster(str(start - pd.Timedelta(days=1, hours=1)))  # та же граница, что в holdout_metrics
     hist = data.load_hourly().loc[start:end]
     parts = []
     for lead in (1, 2):
@@ -53,8 +53,9 @@ def build() -> dict:
     for lab in LABELS:
         s = e[reg == lab]
         n = len(s)
-        level = min(1.0, np.ceil((n + 1) * TARGET) / n) if n else TARGET
-        q[lab] = round(float(np.quantile(s, level)), 4) if n else 0.0
+        # точная k-я порядковая статистика split-conformal: k = ceil((n+1)·0.8)
+        k = min(n, int(np.ceil((n + 1) * TARGET))) if n else 0
+        q[lab] = round(float(np.sort(s.to_numpy())[k - 1]), 4) if n else 0.0
     chk = _month_predictions(CHECK_MONTH)
     before = float(((chk["y"] >= chk["p10"]) & (chk["y"] <= chk["p90"])).mean())
     lo, hi = apply(chk["p10"], chk["p90"], chk["ws"], q)

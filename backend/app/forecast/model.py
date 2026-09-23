@@ -143,6 +143,22 @@ def _gbr(q: float) -> HistGradientBoostingRegressor:
     )
 
 
+def exclude_sources(x: pd.DataFrame, sources: list[str]) -> pd.DataFrame:
+    """Исключить источники погоды: их значения → NaN (модель обучена с пропусками), ансамблевые среднее и разброс
+    пересчитываются по оставшимся. Та же операция, что делает агент (agent.build_features)."""
+    x = x.copy()
+    for s in sources:
+        if s in x:
+            x[s] = float("nan")
+    e100 = [c for c in ENS100 if c not in sources]
+    e10 = [c for c in ENS10 if c not in sources]
+    x["ens_ws100_mean"] = x[e100].mean(axis=1)
+    x["ens_ws100_std"] = x[e100].std(axis=1)
+    x["ens_ws10_mean"] = x[e10].mean(axis=1)
+    x["ens_ws10_std"] = x[e10].std(axis=1)
+    return x
+
+
 def power_curve(end: pd.Timestamp) -> pd.Series:
     """Эмпирическая кривая: медиана мощности станции по бинам измеренного на турбинах ветра (0.5 м/с)."""
     h = data.load_hourly().loc[:end].dropna(subset=["wind", "power"])
@@ -174,7 +190,9 @@ def holdout_metrics() -> dict:
     for mon in MONTHS:
         start = pd.Timestamp(mon + "-01")
         end = start + pd.offsets.MonthEnd(0) + pd.Timedelta(hours=23)
-        f = Forecaster(trained_until=start - pd.Timedelta(hours=1))
+        # граница обучения: последний факт, известный при САМОМ раннем решении месяца (D+2 на 1-е число — в 23:59
+        # за двое суток до него) → S − 1 сут − 1 ч; так ни один час месяца не прогнозируется с «будущим» фактом
+        f = Forecaster(trained_until=start - pd.Timedelta(days=1, hours=1))
         t = training_table(f.trained_until)
         f.models = {q: _gbr(v).fit(t[FEATURES], t["power"]) for q, v in QUANTILES.items()}
         f.curve = power_curve(f.trained_until)
@@ -185,8 +203,11 @@ def holdout_metrics() -> dict:
             pred = f.predict(x[ok])
             fact = hist.loc[ok, "power"]
             persist = hourly["power"].shift(24 * lead).reindex(fact.index)
-            for name, p in (("Модель (бустинг, ансамбль погоды)", pred["p50"]), ("Кривая мощности", pred["curve"]),
-                            ("Персистентность", persist)):
+            x_b1 = exclude_sources(x[ok], ["gfs_ws100"])
+            pred_b1 = f.predict(x_b1)
+            for name, p in (("Модель (бустинг, ансамбль погоды)", pred["p50"]),
+                            ("Модель без gfs_ws100 (как исключает агент)", pred_b1["p50"]),
+                            ("Кривая мощности", pred["curve"]), ("Персистентность", persist)):
                 m = p.notna()
                 agg.setdefault((lead, name), []).append(p[m] - fact[m])
                 agg.setdefault((lead, name, "fact"), []).append(fact[m])

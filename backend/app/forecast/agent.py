@@ -83,16 +83,7 @@ def build_features(a: IssueArgs) -> dict:
     st = _st(a.issue_date)
     if "weather" not in st:
         return {"error": "Сначала fetch_weather"}
-    x = pipeline.prepare(a.issue_date)
-    for src in st["exclude"]:
-        if src in x:
-            x[src] = float("nan")  # модель обучена с пропусками — источник просто не используется
-    ens100 = [c for c in model.ENS100 if c not in st["exclude"]]
-    ens10 = [c for c in model.ENS10 if c not in st["exclude"]]
-    x["ens_ws100_mean"] = x[ens100].mean(axis=1)
-    x["ens_ws100_std"] = x[ens100].std(axis=1)
-    x["ens_ws10_mean"] = x[ens10].mean(axis=1)
-    x["ens_ws10_std"] = x[ens10].std(axis=1)
+    x = model.exclude_sources(pipeline.prepare(a.issue_date), st["exclude"])
     st["x"] = x
     return {"hours": len(x), "features": len(model.FEATURES), "missing_values": int(x[model.FEATURES].isna().sum().sum()),
             "ens_ws100_mean": round(float(x["ens_ws100_mean"].mean()), 2),
@@ -150,7 +141,8 @@ TOOLS = [rank_weather_sources, fetch_weather, build_features, run_forecast, anal
 SYSTEM = """Ты — агент прогноза выработки ветроэлектростанции (2 турбины, Алматинская обл.) для диспетчера.
 Выполни полный цикл через инструменты, для даты выпуска из запроса:
 1) rank_weather_sources — оцени источники погоды; 2) fetch_weather — получи архивный прогноз; если у источника есть пропуски
-в окне прогноза (missing_hours_in_window > 4) или его ошибка заметно хуже медианы — передай его в exclude_sources;
+в окне прогноза (missing_hours_in_window > 4) — передай его в exclude_sources. Высокая ошибка ветра сама по себе
+не повод исключать: проверено, что модель уже учитывает качество источников, и исключение по ошибке не улучшает прогноз;
 3) build_features; 4) run_forecast; 5) analyze_forecast; 6) compare_with_previous.
 Если после анализа видно, что причина проблемы — источник погоды, исключи его и повтори шаги 2–5 (не больше одного раза).
 Правила: все числа бери только из ответов инструментов, ничего не придумывай. Погода — только архивная, фактическую не проси.
@@ -171,10 +163,11 @@ def _deterministic(issue_date: str) -> tuple[list[dict], str]:
         return out
 
     rank = call(rank_weather_sources, {"issue_date": issue_date})
-    maes = [s["mae_ms"] for s in rank["sources"] if s["mae_ms"] is not None]
-    med = sorted(maes)[len(maes) // 2] if maes else 0
-    exclude = [s["source"] for s in rank["sources"] if s["source"] != "best_match_ws100" and (
-        s["missing_hours_in_window"] > 4 or (s["mae_ms"] is not None and s["mae_ms"] > 1.3 * med))]
+    # исключаем только источник с дырами в окне прогноза. Исключение «по ошибке ветра» проверено на окт–янв
+    # (B0/B1): без gfs_ws100 MAE D+1 0.1495 против 0.1490 со всеми — не помогает, поэтому не применяется
+    exclude = [s["source"] for s in rank["sources"] if s["source"] != "best_match_ws100"
+               and s["missing_hours_in_window"] > 4]
+
     call(fetch_weather, {"issue_date": issue_date, "exclude_sources": exclude})
     call(build_features, {"issue_date": issue_date})
     run = call(run_forecast, {"issue_date": issue_date})
